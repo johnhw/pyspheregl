@@ -1,4 +1,5 @@
 from math import *
+import numpy as np
 
 def tuio_to_display(tuio_x, tuio_y, resolution=1200):
     """tuio_to_polar takes an x/y coordinate given in TUIO format (values 0 to 1)
@@ -409,8 +410,3 @@ def spherical_rectangle(centre, width, height, up, x_ratio=1, y_ratio=1, **kwarg
     return spherical_quad(pts, uv=uv, **kwargs)
     
      
-# tests
-# distance measure
-# line pointing at second finger
-# orbit around finger
-# line between two fingers
