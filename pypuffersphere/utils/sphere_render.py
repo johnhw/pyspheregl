@@ -5,11 +5,9 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from pygame.locals import *
 import pygame,time,sys,random,math
-import utils.glskeleton as glskeleton
-import utils.glutils as glutils
-import random
-import utils.gloffscreen as gloffscreen
-import sys
+import random, sys
+
+from . import glskeleton, glutils, gloffscreen
 
 def subdivide_triangles(vertices, faces):
     """Subdivide triangles forming a polyhedron to produce a higher resolution result.

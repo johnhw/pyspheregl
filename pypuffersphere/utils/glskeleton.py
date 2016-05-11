@@ -87,6 +87,7 @@ class GLSkeleton:
         glEnable(GL_LINE_SMOOTH)
     
     # Initialise pygame, and load the fonts
+    # NOTE not used now
     def init_pygame(self,w,h, fullscreen=False): 
         pygame.init()
         
@@ -94,7 +95,6 @@ class GLSkeleton:
         modes = pygame.display.list_modes(32)
         if not modes:
             modes = pygame.display.list_modes(24)
-        pygame.display.gl_set_attribute(pygame.locals.GL_MULTISAMPLEBUFFERS,1)    
         pygame.display.gl_set_attribute(pygame.locals.GL_MULTISAMPLESAMPLES,4)    
         if fullscreen:
             self.screen = pygame.display.set_mode((w,h),pygame.OPENGL|pygame.DOUBLEBUF|pygame.FULLSCREEN)                  
@@ -109,7 +109,10 @@ class GLSkeleton:
       
     def init_pyglet(self, size):
         width, height= size
-        config = pyglet.gl.Config(sample_buffers=1, samples=4)
+        config = None
+        # windows only
+        if os.name == 'nt':
+            config = pyglet.gl.Config(sample_buffers=1, samples=8)
         screens= pyglet.window.get_platform().get_default_display().get_screens()
         self.window = None
         for screen in screens:
