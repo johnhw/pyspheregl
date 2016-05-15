@@ -4,7 +4,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from pygame.locals import *
-import pygame,time,sys,random,math
+import pygame,time,sys,random,math,os
 
 from pypuffersphere.utils import glskeleton, glutils, gloffscreen
 
@@ -219,7 +219,7 @@ class SphereRenderer(object):
 
                 
 
-    def __init__(self,size=1024,background="azworld.png", color=(1.0,1.0,1.0,1.0)):
+    def __init__(self,size=1024,background=None,color=(1.0,1.0,1.0,1.0)):
        self.vertices,self.faces = gen_geosphere(6)       
        self.normals = self.compute_normals(self.vertices, self.faces)
        self.uv = self.compute_uv(self.vertices, self.faces)
@@ -264,7 +264,7 @@ class SphereRenderer(object):
         
         
 class SphereViewer:
-    def __init__(self, sphere_resolution=1024, window_size=(800,600), background="azworld.png", exit_fn=None, color=(1.0,1.0,1.0,1.0), simulate=True, auto_spin=False, draw_fn=None):
+    def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, color=(1.0,1.0,1.0,1.0), simulate=True, auto_spin=False, draw_fn=None):
         self.simulate = simulate
         self.size = sphere_resolution
         self.draw_fn = draw_fn
@@ -410,12 +410,14 @@ def make_viewer(**kwargs):
     sim = False
     if "--test" in sys.argv:
         sim = True
+    
+    background = os.path.join(os.path.dirname(__file__), 'data', 'azworld.png')
 
     if sim:
-        s = SphereViewer(sphere_resolution=1600, window_size=(800, 800), background='azworld.png', simulate=True, **kwargs)
+        s = SphereViewer(sphere_resolution=1600, window_size=(800, 800), background=background, simulate=True, **kwargs)
         print("Simulating")
     else:
-        s = SphereViewer(sphere_resolution=SPHERE_SIZE, window_size=(SPHERE_WIDTH,SPHERE_HEIGHT), background='azworld.png', simulate=False, **kwargs)
+        s = SphereViewer(sphere_resolution=SPHERE_SIZE, window_size=(SPHERE_WIDTH,SPHERE_HEIGHT), background=background, simulate=False, **kwargs)
         print("Non-simulated")
     return s
         
