@@ -186,7 +186,7 @@ def error_labels(calibration, uncorrected_rmse, constant_rmse, quadratic_rmse, c
     
 
        
-def plot_gp_n_test(train_calibration, test_calibration)
+def plot_gp_n_test(train_calibration, test_calibration):
     ds, ns = gp_n_test(train_calibration, test_calibration)
     ds = np.array(ds)
     plt.figure()
