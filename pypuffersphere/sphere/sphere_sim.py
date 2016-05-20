@@ -411,7 +411,7 @@ def make_viewer(**kwargs):
     if "--test" in sys.argv:
         sim = True
     
-    background = os.path.join(os.path.dirname(__file__), 'data', 'azworld.png')
+    background = os.path.join(os.path.dirname(__file__), '../data', 'azworld.png')
 
     if sim:
         s = SphereViewer(sphere_resolution=1600, window_size=(800, 800), background=background, simulate=True, **kwargs)

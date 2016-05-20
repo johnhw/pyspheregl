@@ -1,1 +1,1 @@
-__all__ = [ 'calibration', 'examples', 'utils' ]
+__all__ = [ 'calibration', 'utils', 'sphere' ]
