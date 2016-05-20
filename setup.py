@@ -3,7 +3,7 @@ from setuptools.extension import Extension
 from Cython.Build import cythonize
 from numpy import get_include
 
-sphere_ext = Extension('pypuffersphere/sphere_cy', sources=['pypuffersphere/sphere_cy.pyx'])
+sphere_ext = Extension('pypuffersphere.sphere.sphere_cy', sources=['pypuffersphere/sphere/sphere_cy.pyx'])
 # doesn't work on OSX unless you do this explicitly for some reason...
 sphere_ext.include_dirs = [get_include()]
 
