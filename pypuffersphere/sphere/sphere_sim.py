@@ -234,7 +234,6 @@ class SphereRenderer(object):
             self.offscreen.set_ortho()                    
             glBindTexture(GL_TEXTURE_2D, background_tex)
             self.offscreen.fullscreen_quad(self.size, self.size)                                   
-            print("Init bg")
        glClearColor(0.0, 0.0, 0.0, 1.0)
        
        self.offscreen.end_offscreen()
