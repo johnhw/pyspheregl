@@ -263,7 +263,7 @@ class SphereRenderer(object):
         
         
 class SphereViewer:
-    def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, color=(1.0,1.0,1.0,1.0), simulate=True, auto_spin=False, draw_fn=None):
+    def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, color=(1.0,1.0,1.0,1.0), simulate=True, auto_spin=False, draw_fn=None, tick_fn=None):
         self.simulate = simulate
         self.size = sphere_resolution
         self.draw_fn = draw_fn
@@ -330,6 +330,9 @@ class SphereViewer:
                         
     
     def tick(self):
+        
+        if self.tick_fn:
+            self.tick_fn()
         if self.simulate:
             self.sphere_renderer.begin()
         if self.draw_fn:
@@ -339,6 +342,8 @@ class SphereViewer:
         self.sphere_renderer.end()
         self.redraw()        
         
+        
+            
         if time.clock()-self.last_touch>3 and self.auto_spin:
             self.target_spin = 0.2        
         else:

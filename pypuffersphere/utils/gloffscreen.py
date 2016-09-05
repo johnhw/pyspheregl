@@ -31,7 +31,7 @@ class OffscreenRenderer:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
 
         # allocate 512x512 
-        glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA,width,height,0,GL_BGRA,GL_UNSIGNED_INT, None)
+        glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT, None)
         
         # bind the frame buffer
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, self.fbuf)

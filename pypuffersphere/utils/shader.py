@@ -23,7 +23,7 @@ class Shader:
         self.createShader(frag, GL_FRAGMENT_SHADER)
         # the geometry shader will be the same, once pyglet supports the extension
         # self.createShader(frag, GL_GEOMETRY_SHADER_EXT)
-
+        self.uniforms = {}
         # attempt to link the program
         self.link()
 
@@ -61,21 +61,14 @@ class Shader:
         else:
             # all is well, so attach the shader to the program
             glAttachShader(self.handle, shader);            
-            # uniforms = []
-            # for i in range(2):
-                # print i
-                # length = c_int(0)
-                # size = c_int(0)
-                # enum = c_uint(0)
-                # name = c_buffer(21)
-                # glGetActiveUniform(self.handle, c_uint(i), 20, byref(length), byref(size),
-                                  # byref(enum), name)
-                  
-                # uniforms.append(name.value)
-            # print uniforms
-            # programs = c_int(0)
-            # glGetProgramiv(self.handle, GL_ACTIVE_UNIFORMS, byref(programs))
-            # print programs.value
+            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, byref(temp))
+            # create a buffer for the log
+            buffer = create_string_buffer(temp.value)
+            # retrieve the log text
+            glGetShaderInfoLog(shader, temp, None, buffer)
+
+            print buffer.value
+           
             
             
     
@@ -113,6 +106,13 @@ class Shader:
         # so this should probably be a class method instead
         glUseProgram(0)
 
+        
+    def get_uniform(self, name):
+        # cache uniform locations
+        if name not in self.uniforms:
+            self.uniforms[name] = glGetUniformLocation(self.handle, name)
+        return self.uniforms[name]
+        
     # upload a floating point uniform
     # this program must be currently bound
     def uniformf(self, name, *vals):
@@ -125,7 +125,7 @@ class Shader:
                 3 : glUniform3f,
                 4 : glUniform4f
                 # retrieve the uniform location, and set
-            }[len(vals)](glGetUniformLocation(self.handle, name), *vals)
+            }[len(vals)](self.get_uniform(name), *vals)
             
 
     # upload an integer uniform
@@ -139,13 +139,13 @@ class Shader:
                 3 : glUniform3i,
                 4 : glUniform4i
                 # retrieve the uniform location, and set
-            }[len(vals)](glGetUniformLocation(self.handle, name), *vals)
+            }[len(vals)](self.get_uniform(name), *vals)
 
     # upload a uniform matrix
     # works with matrices stored as lists,
     # as well as euclid matrices
     def uniform_matrixf(self, name, mat):
         # obtian the uniform location
-        loc = glGetUniformLocation(self.handle, name)
+        loc = self.get_uniform(name)
         # uplaod the 4x4 floating point matrix
         glUniformMatrix4fv(loc, 1, False, (c_float * 16)(*mat))
