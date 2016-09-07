@@ -9,7 +9,7 @@ from collections import defaultdict
 import pyproj
 import scipy.optimize, scipy.interpolate, scipy.misc
 from sklearn import gaussian_process
-import sphere
+from pypuffersphere.sphere import sphere
 import random
 
 import matplotlib as mpl
@@ -201,7 +201,7 @@ def gp_error(gp_x, gp_y):
    
 def augment_calibration(calibration):
     xs, ys = calibration["tuio_x"], calibration["tuio_y"]
-    lonlat = np.array([sphere.tuio_to_polar(x,y) for x,y in zip(xs,ys)])
+    lonlat = np.array([sphere.tuio_to_polar(x,y) for x,y in zip(xs,ys)])    
     calibration["touch_lon"],calibration["touch_lat"] = lonlat[:,0], lonlat[:,1]
 
     lons,lats = calibration["target_lon"], calibration["target_lat"]
@@ -298,8 +298,11 @@ def write_module(fname, calibration_name, calibration, errors, fit):
         f.write("# Expected RMS error for mode 'gp':        %.2f \n" % rms(errors["gp"]))
         
         f.write("""    
-import sphere, process_calibration, cPickle, base64
+import  cPickle, base64
+from pypuffersphere.sphere import sphere
+from pypuffersphere.calibration import process_calibration
 from numpy import pi
+import os
         """)
         
         def precise_list(x):
@@ -331,9 +334,11 @@ quadratic_coeff = {quadratic_coeff}
         
         f.write("""
 
+# find gp_calibration.dat in the same directory as *this file*
+dirname = os.path.abspath(os.path.dirname(__file__))
 
 # GP data in pickled format
-with open("gp_calibration.dat", "rb") as gp_f:
+with open(os.path.join(dirname,"gp_calibration.dat"), "rb") as gp_f:
     gp_x, gp_y = cPickle.load(gp_f)\n\n""")
         
         
@@ -489,7 +494,7 @@ def generate_module(calibration_name, calibration, errors, fit):
 
 def time_module(calibration):
     import calibration as cal
-    tuio_time = timeit.timeit("lon, lat = sphere.polar_to_tuio(0.5, 0.5)", setup="import sphere", number=1000)
+    tuio_time = timeit.timeit("lon, lat = sphere.polar_to_tuio(0.5, 0.5)", setup="from pypuffersphere.sphere import sphere", number=1000)
     times = {}
     times["tuio"] = tuio_time
     for mode in ["none", "constant", "quadratic", "cubic", "gp"]:

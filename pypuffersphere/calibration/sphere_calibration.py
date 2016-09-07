@@ -4,11 +4,10 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from pygame.locals import *
 import pygame,time,sys,random,math
-import glskeleton, glutils, random
 from collections import defaultdict
-import gloffscreen
-import sphere_sim
-import sphere
+from pypuffersphere.utils import glutils, glskeleton, gloffscreen
+from pypuffersphere.sphere import sphere_sim, sphere
+import random
 import itertools
 import time
 #import sphere_cy
@@ -168,7 +167,7 @@ if __name__ == "__main__":
     count = 0
     
     if not dummy:
-        import touch_sphere as touch_lib
+        import pypuffersphere.sphere.touch_sphere as touch_lib
         # Start touch service
         start_touch()
     else:
@@ -216,7 +215,7 @@ if __name__ == "__main__":
                     tf = -1
                 touches = {tf:(0.5, 0.5)}                
                 
-            
+            touches = touches[0]
             for touch in touches:
                 if touch not in ignored_touches:
                     if touch_times.has_key(touch):

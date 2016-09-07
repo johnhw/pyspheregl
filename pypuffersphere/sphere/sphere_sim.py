@@ -268,6 +268,7 @@ class SphereViewer:
         self.size = sphere_resolution
         self.draw_fn = draw_fn
         self.exit_fn = exit_fn
+        self.tick_fn = tick_fn
         self.auto_spin = auto_spin
         self.window_size = window_size
         if self.simulate:

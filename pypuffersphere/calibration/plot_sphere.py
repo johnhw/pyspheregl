@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os, sys, time, random
 import pyproj
 
-import sphere
+from pypuffersphere.sphere import sphere
 
 def proj_wrapper(proj):
     def wrapped_proj(lon, lat):

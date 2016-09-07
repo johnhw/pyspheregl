@@ -10,8 +10,8 @@ from collections import defaultdict
 import pyproj
 import scipy.optimize, scipy.interpolate
 from sklearn import gaussian_process
-import sphere
-from plot_sphere import plot_reference_grid, proj_wrapper
+from pypuffersphere.sphere import sphere
+from pypuffersphere.calibration.plot_sphere import plot_reference_grid, proj_wrapper
 
 
 import matplotlib as mpl
