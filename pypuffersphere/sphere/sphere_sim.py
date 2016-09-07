@@ -269,6 +269,7 @@ class SphereViewer:
         self.draw_fn = draw_fn
         self.exit_fn = exit_fn
         self.auto_spin = auto_spin
+        self.window_size = window_size
         if self.simulate:
             self.skeleton = glskeleton.GLSkeleton(draw_fn = self.redraw, resize_fn = self.resize, tick_fn=self.tick, mouse_fn=self.mouse, key_fn=self.key, window_size=window_size)
             self.sphere_renderer = SphereRenderer(size=sphere_resolution, background=background, color=color)
@@ -324,6 +325,7 @@ class SphereViewer:
             
     def key(self, event, symbol, modifiers):
         if symbol==pyglet.window.key.ESCAPE:
+            
             if self.exit_fn:
                 self.exit_fn()
             sys.exit(0)

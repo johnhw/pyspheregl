@@ -7,6 +7,7 @@
 
 from pyglet.gl import *
 from ctypes import *
+import contextlib
 
 class Shader:
     # vert, frag and geom take arrays of source strings
@@ -127,7 +128,13 @@ class Shader:
                 # retrieve the uniform location, and set
             }[len(vals)](self.get_uniform(name), *vals)
             
-
+    def __enter__(self):
+        self.bind()
+        return self
+        
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.unbind()
+    
     # upload an integer uniform
     # this program must be currently bound
     def uniformi(self, name, *vals):
