@@ -3,7 +3,7 @@ from pyglet.gl import *
 import numpy as np
 
 class VBuf:
-    def __init__(self,  buffer, name="", id=-1, divisor=1, mode=GL_STATIC_DRAW):
+    def __init__(self,  buffer, name="", id=-1, divisor=-1, mode=GL_STATIC_DRAW):
         self.buffer = create_vbo(buffer, mode=mode)
         self.name = name
         self.id = id
@@ -24,12 +24,13 @@ def create_vao(vbufs):
     vao = GLuint()
     glGenVertexArrays(1, vao)
     glBindVertexArray(vao)
-
+ 
     # attach vbos
     for vbuf in vbufs:
         glEnableVertexAttribArray(vbuf.id)
         attach_vbo(vbuf.buffer, vbuf.id)
-        glVertexAttribDivisor(vbuf.id, vbuf.divisor)
+        if vbuf.divisor!=-1:
+            glVertexAttribDivisor(vbuf.id, vbuf.divisor)
 
     # unbind all buffers
     glBindVertexArray(0)
@@ -77,14 +78,14 @@ def create_elt_buffer(arr, mode=GL_STATIC_DRAW):
 
 def attach_vbo(bo, n):
     """Attach a vertex buffer object to attribute pointer n"""
-    glBindBuffer(bo.target, bo.id)
-    glEnableVertexAttribArray(n)    
+    glEnableVertexAttribArray(n)
+    glBindBuffer(bo.target, bo.id)        
     # use number of elements in last element of the buffer object
     glVertexAttribPointer(n, bo.shape[-1], GL_FLOAT, False, 0, 0)
 
 
 def draw_elt_buffer(elt_bo, primitives=GL_QUADS):
-    """Using the given element buffer, draw the indexed geometry"""
+    """Using the given element buffer, draw the indexed geometry"""    
     glBindBuffer(elt_bo.target, elt_bo.id)    
     glDrawElements(primitives, elt_bo.shape[0], GL_UNSIGNED_INT, 0)        
     # unbind all buffers

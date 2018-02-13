@@ -257,11 +257,10 @@ class Shader:
         self.bind()
         # attach all relevant textures
         for t, tex in textures.items():
-            glActiveTexture(GL_TEXTURE0+t)
+            glActiveTexture(GL_TEXTURE0+t)            
             glBindTexture(tex.target, tex.id)
         
-                    
-      
+                          
         # set uniforms
         # note that the type must be right here!
         for k, v in vars.items():
@@ -529,20 +528,13 @@ def shader_dump(handle):
     n_uniforms = glGetProgram(GL_ACTIVE_UNIFORMS)
     glGetActiveUniform(handle, i, )
 
-class VBuf:
-    def __init__(self, name, buffer, divisor=1, mode=GL_STATIC_DRAW):
-        self.buffer = np_vbo.create_vbo(buffer, mode=mode)
-        self.name = name
-        self.loc = -1
-        self.shape = buffer.shape
-        self.divisor = divisor
-        self.mode = mode
+
 
     
 
 
 class ShaderVBO:
-    def __init__(self, shader, ixs, buffers={}, textures={}, vars={}, primitives=GL_QUADS):
+    def __init__(self, shader, ixs, buffers=None, textures=None, vars=None, primitives=GL_QUADS):
         self.shader = shader
         self.ibo = np_vbo.create_elt_buffer(ixs)
         
@@ -551,7 +543,9 @@ class ShaderVBO:
         self.tex_names = {}
         self.uniforms = {}
         self.primitives = primitives
-        
+        buffers = buffers or {}
+        textures = textures or {}
+        vars = vars or {}
         self.buffers_used = {}
         with self.shader as s:
             vbos = []
@@ -572,7 +566,7 @@ class ShaderVBO:
             for ix,(tex_name,tex) in enumerate(textures.items()):
                 # set the sampler to the respective texture unit
                 s.uniformi(tex_name, ix)       
-                print("texture: %s -> %d" % (name, ix))
+                print("texture: %s -> active_texture_%d" % (tex_name, ix))
                 self.tex_names[tex_name] = ix         
                 self.textures[ix] = tex
 
@@ -590,7 +584,8 @@ class ShaderVBO:
         """Change the named texture to the given texture ID"""
         self.textures[self.tex_names[name]] = texture
 
-    def draw(self, vars={}, n_prims=0):
+    def draw(self, vars=None, n_prims=0):
+        vars = vars or {}
         self.shader.draw(vao=self.vao, ibo=self.ibo, textures=self.textures, vars=vars, n_prims=n_prims, primitives=self.primitives)
         
   

@@ -273,7 +273,9 @@ layout(location=0) in vec2 position;
 void main()
 {
     gl_Position.xy = position;
-    texCoord = position;
+    gl_Position.z = 1;
+    gl_Position.w = 1;
+    texCoord = position / 2.0 + 0.5;
 }
 """
 
@@ -290,15 +292,45 @@ void main(void)
      vec4 tex_color = texture2D(quadTexture, texCoord);
      gl_FragColor = tex_color;
      
+  
+     
+     
+     
 }
 
 """
+from pypuffersphere.utils.graphics_utils import make_unit_quad_tile
+
+import os 
+def del_pass(*args, **kwargs):
+    raise Exception("WHO DID THIS!?")
+
+class SphereViewer:
+    def make_quad(self):
+        self.fbo = gloffscreen.FBOContext(self.size, self.size)
+        self.quad_shader = shader.Shader(vert=[quad_vert], frag=[quad_frag])        
+        n_subdiv = 8
+        
+        quad_indices, quad_verts, quad_texs = make_unit_quad_tile(n_subdiv)    
+
+        qverts = np_vbo.VBuf(quad_verts, id=0)
+        
+        self.qverts = qverts
+        self.qibo = np_vbo.create_elt_buffer(quad_indices)
+        self.vao = np_vbo.create_vao([self.qverts])
+
+        self.quad = shader.ShaderVBO(self.quad_shader, quad_indices, 
+                                         buffers={"position":qverts},
+                                         textures={"quadTexture":self.fbo.texture})
 
         
-class SphereViewer:
+
+
     def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, color=(1.0,1.0,1.0,1.0), simulate=True, auto_spin=False, draw_fn=None, tick_fn=None):
         self.simulate = simulate
-        self.quad_shader = shader.Shader(vert=[quad_vert], frag=[quad_frag])
+        
+        dir_path = os.path.dirname(os.path.realpath(__file__))        
+        self.world_texture = pyglet.image.load(os.path.join(dir_path, ("../data/azworld.png")))
         
         self.size = sphere_resolution
         self.draw_fn = draw_fn
@@ -306,6 +338,8 @@ class SphereViewer:
         self.tick_fn = tick_fn
         self.auto_spin = auto_spin
         self.window_size = window_size
+
+        
 
         if self.simulate:
             self.skeleton = glskeleton.GLSkeleton(draw_fn = self.redraw, resize_fn = self.resize, tick_fn=self.tick, mouse_fn=self.mouse, key_fn=self.key, window_size=window_size)
@@ -317,7 +351,7 @@ class SphereViewer:
             cy = window_size[1] - sphere_resolution            
             glViewport(cx/2,0,sphere_resolution,sphere_resolution)
             self.skeleton.auto_clear = False
-        
+        self.make_quad()
         self.rotation = [0,0]
         self.last_rotation = [0,0]
         self.rotate_scale = -0.2        
@@ -326,6 +360,7 @@ class SphereViewer:
         self.last_touch = time.clock()
         self.spin = 0
         self.target_spin = 0
+
       
     def resize(self, w, h):
         if not self.simulate:
@@ -367,14 +402,17 @@ class SphereViewer:
         
         if self.tick_fn:
             self.tick_fn()
-        if self.simulate:
-            self.sphere_renderer.begin()
-        if self.draw_fn:
-            self.draw_fn()        
-        if not self.simulate:
-            return
-        self.sphere_renderer.end()
-        self.redraw()        
+        #self.redraw()
+        #self.draw_fn()
+
+        # if self.simulate:
+        #     self.sphere_renderer.begin()
+        # if self.draw_fn:
+        #     self.draw_fn()        
+        # if not self.simulate:
+        #     return
+        # self.sphere_renderer.end()
+        # self.redraw()        
         
         
             
@@ -390,54 +428,26 @@ class SphereViewer:
     
                         
     def redraw(self):  
-            
-        if not self.simulate:
-            return 
-
-        glPushAttrib(GL_ALL_ATTRIB_BITS)
-        glMatrixMode(GL_PROJECTION)
-        glPushMatrix()
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        glClearColor(0,0,0,1)
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
         
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        gluPerspective(60.0, float(self.skeleton.w)/float(self.skeleton.h), 1, 2000)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-        # turn on some lights
-        glEnable(GL_LIGHTING)
-        glEnable(GL_LIGHT0)
-        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, [0.1, 0.1, 0.1,1])
-        glLightfv(GL_LIGHT0, GL_POSITION, [0,0,1])
-        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, [1,1,1,1])        
-        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [1,1,1,1])
-        glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, [50.0])        
-        glShadeModel(GL_SMOOTH)
-        glEnable(GL_CULL_FACE)
-        if self.drag_start is None:
-            self.rotation[1] = self.rotation[1] * 0.95
-        glEnable(GL_DEPTH_TEST)
-        glDepthFunc(GL_LESS)
-        glEnable(GL_LIGHTING)
+        
+        glEnable(GL_BLEND)        
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        gluLookAt(0,0,-2.5,0,0,0,0,1,0)        
-        self.frame_ctr += 1
+
+        # clear the screen
+        glClearColor(0.1, 0.1, 0.1, 1)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        glViewport(0,0,self.window_size[0],self.window_size[1])
+
+        with self.fbo as f:
+            self.draw_fn()
+
+        
+        self.quad.draw(n_prims=0)
+ 
+        return
        
-        latitude = self.rotation[1]
-        longitude = self.rotation[0]
-        
-        glRotatef(-90+latitude, 1, 0,0)
-        glRotatef(longitude, 0, 0, 1)                
-        self.sphere_renderer.render()
-        glPopAttrib()
-        glMatrixMode(GL_MODELVIEW)
-        glPopMatrix()
-        
-        glMatrixMode(GL_PROJECTION)
-        glPopMatrix()
+
+   
         
 
 SPHERE_WIDTH = 2560
@@ -453,7 +463,8 @@ def make_viewer(**kwargs):
         s = SphereViewer(sphere_resolution=1600, window_size=(800, 800), background=None, simulate=True, **kwargs)
         print("Simulating")
     else:
-        s = SphereViewer(sphere_resolution=SPHERE_SIZE, window_size=(SPHERE_WIDTH,SPHERE_HEIGHT), background=None, simulate=False, **kwargs)
+        s = SphereViewer(sphere_resolution=1600, window_size=(800, 800), background=None, simulate=False, **kwargs)
+        #s = SphereViewer(sphere_resolution=SPHERE_SIZE, window_size=(SPHERE_WIDTH,SPHERE_HEIGHT), background=None, simulate=False, **kwargs)
         print("Non-simulated")
     return s
         

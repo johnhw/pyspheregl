@@ -5,8 +5,10 @@ import thread
 from pyglet.gl import *
 
 from pypuffersphere.utils import np_vbo, shader
+class Texture:
+    pass
 
-class OffscreenRenderer:
+class FBOContext:
         
     def __init__(self, width, height):
         aspect = float(width)/float(height)
@@ -15,6 +17,10 @@ class OffscreenRenderer:
         glGenTextures(1, self.fbo_texture)
         glGenFramebuffers(1 ,self.fbo_buffer)
         
+
+        self.texture = Texture()
+        self.texture.id = self.fbo_texture
+        self.texture.target = GL_TEXTURE_2D
         # bind the texture and set its parameters
         # create a texture
         glBindTexture(GL_TEXTURE_2D, self.fbo_texture)
@@ -49,8 +55,8 @@ class OffscreenRenderer:
     def __enter__(self):        
         #enable render buffer
         glBindFramebuffer(GL_FRAMEBUFFER, self.fbo_buffer)        
-        self.real_viewport = (GLuint * 4)()
-        glGetIntegerv(GL_VIEWPORT, viewport)
+        self.real_viewport = (GLint * 4)()
+        glGetIntegerv(GL_VIEWPORT, self.real_viewport)
         glViewport(0, 0, self.width, self.height)
         
         
