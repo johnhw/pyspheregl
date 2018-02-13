@@ -61,6 +61,23 @@ def if_in_use(f):
   
     return execute_if_in_use
   
+import os
+
+def shader_from_file(verts, frags, path="shaders"):
+    """Load vertex and fragment shaders from a list of files, and return the compiled shader"""
+    v_shaders = []
+    for vert in verts:
+        with open(os.path.join(path,vert)) as v:
+                v_shaders.append(v.read())
+                
+    f_shaders = []
+    for frag in frags:
+        with open(os.path.join(path,frag)) as f:
+                f_shaders.append(f.read())
+        
+    print('\nCompiling shader: %s, %s' % (verts, frags))
+    _shader = Shader(v_shaders, f_shaders)
+    return _shader
 
 class Shader:
     # vert, frag and geom take arrays of source strings
