@@ -1,30 +1,8 @@
-import sys,time,os,random,cPickle, math
-import traceback
-
-import pygame, thread
-from pygame.locals import *
-
-import thread
-from OpenGL.GL import *
-from OpenGL.GLU import *
-from OpenGL.GLUT import *
+import sys, time, os
 import pyglet
 
 # Skeleton class                                          
 class GLSkeleton:
-
-    #initialize opengl with a simple ortho projection
-    def init_opengl(self):
-        glClearColor(0.0, 0.0, 0.0, 1.0)
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
-
-        #enable texturing and alpha
-        glEnable(GL_TEXTURE_2D)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glEnable(GL_LINE_SMOOTH)
-    
-       
       
     def init_pyglet(self, size):
         width, height= size
@@ -52,7 +30,6 @@ class GLSkeleton:
         self.window.set_handler("on_mouse_drag", self.on_mouse_drag)  
         self.window.set_handler("on_resize", self.on_resize)      
         self.w, self.h = self.window.width, self.window.height
-        self.init_opengl()
         
 
     def on_resize(self, w, h):            
