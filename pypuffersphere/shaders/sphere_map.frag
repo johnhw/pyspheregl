@@ -1,7 +1,6 @@
 #version 330 core
 #define M_PI 3.1415926535897932384626433832795
 
-
 // from the vertex shader
 in vec2 texCoord;
 in vec2 sphere;

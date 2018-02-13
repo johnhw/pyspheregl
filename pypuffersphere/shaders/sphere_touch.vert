@@ -1,10 +1,6 @@
 
-
-// These are sent to the fragment shader
-out vec2 texCoord;      // UV coordinates of texture
-out float alpha;        // Mask to remove out of circle texture
-out float illumination; // brightness of point
 out vec2 sphere;        // polar sphere coords
+out float alpha;        // alpha transparency
 layout(location=0) in vec2 position;
 uniform float rotate, tilt;
 
@@ -31,12 +27,7 @@ void main()
     // cut off all portions outside of the circle and at the rear of the sphere
     float radius = sqrt((position.x*position.x)+(position.y*position.y));
     alpha = 1.0-smoothstep(0.95,1.0, radius);    
-    alpha *= smoothstep(0.0, 0.1, gl_Position.z);
+    alpha *= smoothstep(0.0, 0.01, gl_Position.z);
 
-    // illuminate
-    illumination = gl_Position.z;
-    
     gl_Position.w = 1;
-    // tex-coords are just 0-1, 0-1
-    texCoord = position / 2.0 + 0.5;
 }
