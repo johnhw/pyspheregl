@@ -1,50 +1,43 @@
 import sys,time,os,random,cPickle, math
 import traceback
 
-import pygame, thread
-from pygame.locals import *
+
 from ctypes import *
 import thread
-from OpenGL.GL import *
-from OpenGL.GLU import *
-from OpenGL.GLUT import *
-import glutils
-
-#from OpenGL.GL.ARB.framebuffer_object import *
-from OpenGL.GL.EXT.framebuffer_object import *
-from OpenGL.GL.EXT.framebuffer_multisample import *
+from pyglet.gl import *
 
 class OffscreenRenderer:
         
         
     def setup_texture(self, width, height, aspect=1.0):
-        self.ftarget= glGenTextures(1)
-        self.fbuf = glGenFramebuffersEXT(1)
-        self.frender = glGenRenderbuffersEXT(1)
+        self.ftarget, self.fbuf, self.frender = GLuint(), GLuint(), GLuint()
+        glGenTextures(1, self.ftarget)
+        glGenFramebuffers(1 ,self.fbuf)
+        
 
         # bind the texture and set its parameters
-        glBindTexture( GL_TEXTURE_2D, self.ftarget)
-        glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE )
+        # create a texture
+        glBindTexture(GL_TEXTURE_2D, self.ftarget)
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE)
         glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,GL_REPEAT)
         glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT )
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-
-        # allocate 512x512 
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)        
         glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT, None)
         
-        # bind the frame buffer
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, self.fbuf)
-        
-        # create a depth buffer        
-        
-        glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, self.frender)
-        glRenderbufferStorageEXT( GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, width, height)
-        
+        # bind the frame buffer to the texture as the color render target
+        glBindFramebuffer(GL_FRAMEBUFFER, self.fbuf)
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.ftarget, 0)
+
+        # create a depth buffer (as a render buffefr) and attach it        
+        glGenRenderbuffers(1, self.frender)
+        glBindRenderbuffer(GL_RENDERBUFFER, self.frender)
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height)                
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, self.fbuf)
+
         # unbind the framebuffer/renderbuffer
-        glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_EXT, self.fbuf)
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0)
-        glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        
         self.width = width
         self.height = height
         self.aspect = aspect
@@ -88,13 +81,7 @@ class OffscreenRenderer:
     def begin_offscreen(self):
         
         #enable render buffer
-        glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, self.frender)
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, self.fbuf)
-        
-        
-        # bind the framebuffer
-        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT,GL_TEXTURE_2D, self.ftarget, 0)                
-        glFramebufferRenderbufferEXT( GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, self.frender)
+        glBindFramebuffer(GL_FRAMEBUFFER, self.fbuf)
         
         # push the viewport and reset it 
         glPushAttrib(GL_VIEWPORT_BIT)
@@ -103,10 +90,7 @@ class OffscreenRenderer:
         
     def end_offscreen(self):
         # disable render buffer        
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0)
-        glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0)
-        
-        # restore viewport and transform matrix
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
         glPopAttrib()
         
         

@@ -3,10 +3,15 @@ import pyglet
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
-from pygame.locals import *
-import pygame,time,sys,random,math,os
 
-from pypuffersphere.utils import glskeleton, glutils, gloffscreen
+import time,sys,random,math,os
+
+import timeit
+wall_clock = timeit.default_timer
+
+from pypuffersphere.utils import glskeleton,  gloffscreen, np_vbo, shader
+
+
 
 def subdivide_triangles(vertices, faces):
     newfaces = []
@@ -229,11 +234,6 @@ class SphereRenderer(object):
        glClearColor(*color)
        glClear(GL_COLOR_BUFFER_BIT)         
        glLoadIdentity()    
-       if background:
-            background_tex,_,_ = glutils.load_texture(background)
-            self.offscreen.set_ortho()                    
-            glBindTexture(GL_TEXTURE_2D, background_tex)
-            self.offscreen.fullscreen_quad(self.size, self.size)                                   
        glClearColor(0.0, 0.0, 0.0, 1.0)
        
        self.offscreen.end_offscreen()
@@ -271,6 +271,7 @@ class SphereViewer:
         self.tick_fn = tick_fn
         self.auto_spin = auto_spin
         self.window_size = window_size
+
         if self.simulate:
             self.skeleton = glskeleton.GLSkeleton(draw_fn = self.redraw, resize_fn = self.resize, tick_fn=self.tick, mouse_fn=self.mouse, key_fn=self.key, window_size=window_size)
             self.sphere_renderer = SphereRenderer(size=sphere_resolution, background=background, color=color)
@@ -296,13 +297,8 @@ class SphereViewer:
             cx = w - self.size
             cy = h - self.size            
             glViewport(cx/2,cy/2,self.size,self.size)
-        else:
-            print(w,h)
+        else:            
             glViewport(0,0,w,h)
-            glMatrixMode(GL_PROJECTION)
-            glLoadIdentity()
-            glOrtho(0, w, 0, h, -1, 500)
-            glMatrixMode(GL_MODELVIEW)
             
             
     def start(self):
@@ -418,13 +414,11 @@ def make_viewer(**kwargs):
     if "--test" in sys.argv:
         sim = True
     
-    background = os.path.join(os.path.dirname(__file__), '../data', 'azworld.png')
-
     if sim:
-        s = SphereViewer(sphere_resolution=1600, window_size=(800, 800), background=background, simulate=True, **kwargs)
+        s = SphereViewer(sphere_resolution=1600, window_size=(800, 800), background=None, simulate=True, **kwargs)
         print("Simulating")
     else:
-        s = SphereViewer(sphere_resolution=SPHERE_SIZE, window_size=(SPHERE_WIDTH,SPHERE_HEIGHT), background=background, simulate=False, **kwargs)
+        s = SphereViewer(sphere_resolution=SPHERE_SIZE, window_size=(SPHERE_WIDTH,SPHERE_HEIGHT), background=None, simulate=False, **kwargs)
         print("Non-simulated")
     return s
         
@@ -433,24 +427,9 @@ if __name__=="__main__":
     s = make_viewer()
     size = s.size
     
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-    glDisable(GL_LIGHTING)
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    glOrtho(0, size, 0, size, -1, 500)
-    glMatrixMode(GL_MODELVIEW)    
-    glLoadIdentity()
-    glEnable(GL_POINT_SMOOTH)
-    glPointSize(10.0)
-    glColor4f(1,0,0,1)
-    
     def draw_fn():           
-        glClearColor(1,1,1,1)
-        
+        glClearColor(1,0,1,1)        
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
-        glBegin(GL_POINTS)
-        glVertex2f(512,100)
-        glEnd()
         
     s.draw_fn = draw_fn
     s.start()
