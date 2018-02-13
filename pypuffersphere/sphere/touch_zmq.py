@@ -1,4 +1,5 @@
 import zmq
+import json
 import OSC
 from asciimatics.screen import Screen
 import fire
@@ -6,6 +7,11 @@ import timeit
 import sphere
 import numpy as np
 wall_clock = timeit.default_timer
+
+import logging
+logging.basicConfig(filename='touch_zmq.log', level=logging.DEBUG, 
+                    format='%(asctime)s %(levelname)s %(name)s %(message)s')
+logger=logging.getLogger(__name__)
 
 
 
@@ -22,37 +28,7 @@ XXxx++--..
 
 class OSCMonitor:
     
-    def handler(self, addr, tags, data, client_addr):
-        self.last_packet = wall_clock()        
-        
-        # store a trace of recent packets
-        self.packet_trace.append(("%4.1f: "%self.last_packet) + "\t".join([str(d) for d in data]))
-        if len(self.packet_trace)>10:
-                self.packet_trace.pop(0)
-
-        # we have data, decode it
-        if len(data)>0:
-            # decode the OSC packet
-            if data[0]=='fseq':
-                # frame complete
-                self.last_fseq = data[1]
-                self.last_touch_list = self.touch_list
-                self.touch_list = {}                
-                # broadcast the touch event
-                self.zmq_socket.send("TOUCH", json.dumps({"touches":self.last_touch_list, 
-                                                            "fseq":self.last_fseq, 
-                                                            "t":self.last_packet}))
-            
-            # a single touch, accumulate into touch buffer
-            if data[0]=='set':
-                self.touch_list[data[1]] = data[2], data[3]
-            
-            # system is alive
-            if data[0]=='alive':
-                pass
-        
-        # advertise that we are still alive
-        self.zmq_socket.send("ALIVE %f"%self.last_packet)
+    
 
     def render_sphere(self, screen, touch_list):
         touches = sorted(touch_list.keys())
@@ -95,13 +71,15 @@ class OSCMonitor:
         if t-self.last_frame<0.2:
             return
 
-        self.last_frame = t
+        self.last_frame = t 
 
         # status line
         screen.print_at("MSG: %15s" % self.msg, 0, 0, colour=screen.COLOUR_CYAN)
-        screen.print_at("OSC: %10s:%5d" % (self.osc_ip, self.osc_port), 25, 0, colour=screen.COLOUR_YELLOW)
-        #screen.print_at("OSCIP: %10s" % self.osc_ip, 44, 0, colour=screen.COLOUR_WHITE)
+        screen.print_at("OSC: %10s:%5d" % (self.osc_ip, self.osc_port), 25, 0, colour=screen.COLOUR_YELLOW)        
         screen.print_at("ZMQ: %5d" % self.zmq_port, 66, 0, colour=screen.COLOUR_MAGENTA)
+
+        # exceptions while receiving packets
+        screen.print_at(self.last_exception, 0, 1, colour=screen.COLOUR_WHITE, bg=screen.COLOUR_RED)
 
         # fseq and ntouches
         fseq_x = 44
@@ -148,36 +126,89 @@ class OSCMonitor:
         screen.print_at("HEART:%5.1f" % delta_t, 0,2, colour=fg, bg=bg)
         screen.refresh()
 
+    def handler(self, addr, tags, data, client_addr):
+        self.last_packet = wall_clock()        
+        
+        # store a trace of recent packets
+        self.packet_trace.append(("%4.1f: "%self.last_packet) + "\t".join([str(d) for d in data]))
+        if len(self.packet_trace)>10:
+                self.packet_trace.pop(0)
+
+        # we have data, decode it
+        if len(data)>0:
+            # decode the OSC packet
+            if data[0]=='fseq':
+                # frame complete
+                self.last_fseq = data[1]
+                self.last_touch_list = self.touch_list
+                self.touch_list = {}                
+                # broadcast the touch event
+                self.zmq_socket.send_multipart(["TOUCH", json.dumps({"touches":self.last_touch_list, 
+                                                            "fseq":self.last_fseq, 
+                                                            "stale":0,
+                                                            "t":self.last_packet})])
+            
+            # a single touch, accumulate into touch buffer
+            if data[0]=='set':
+                self.touch_list[data[1]] = data[2], data[3]
+            
+            # system is alive
+            if data[0]=='alive':
+                pass
+        
+        # advertise that we are still alive
+        self.zmq_socket.send("ALIVE %f"%self.last_packet)
+
     def monitor_loop(self, screen):
         """Enter an infinite loop, handling OSC requests and broadcasting
         them over ZMQ"""
         if screen:
             screen.clear()
         while True:
+            # blocking wait, for up to timeout seconds
             self.osc_server.handle_request()
             if screen:
                 self.update_display(screen)
 
             # clear touch list if it gets stale
-            if wall_clock()-self.last_packet>0.25:                
-                self.last_touch_list = {}
+            if wall_clock()-self.last_packet>self.timeout*2:                
+                self.last_touch_list = {}            
                 self.last_fseq = -1
-            
+                
+                # broadcast a stale touch so subscribers know
+                # that touches aren't good any more
+                self.zmq_socket.send_multipart(["TOUCH", (json.dumps({"touches":{}, 
+                                                            "fseq":-2, 
+                                                            "stale":1,
+                                                            "t":wall_clock()}))])
 
+    def _handler(self, *args, **kwargs):
+        try:
+            self.handler(*args, **kwargs)
+        except Exception as err:
+            # make sure we log exceptions to disk
+            logger.error(err)
+            self.last_exception = str(err)
 
-    def monitor(self, port=3333, zmq_port=4000, ip="127.0.0.1", msg="/tuio/2Dcur", timeout=0.1, full_trace=False, monitor=True):
+    
+    def monitor(self, port=3333, zmq_port=4000, ip="127.0.0.1", msg="/tuio/2Dcur", timeout=0.2, full_trace=False, monitor=True):
         """Listen to OSC messages on 3333. 
         Broadcast on the ZMQ PUB stream on the given TCP port."""        
         
         self.monitor_enabled = monitor
         self.msg = msg
-        self.last_packet = wall_clock()
-        self.last_frame = wall_clock()
         self.osc_port = port
         self.osc_ip = ip
         self.zmq_port = zmq_port
-
+        self.timeout = timeout        
         self.full_trace = full_trace
+        self.last_exception = ""
+
+        # reset the timeouts
+        self.last_packet = wall_clock() # last time a packet came in
+        self.last_frame = wall_clock() # last time screen was redrawn
+        
+
         # create a ZMQ port to broadcast on
         context = zmq.Context()
         self.zmq_socket = context.socket(zmq.PUB)
@@ -185,14 +216,16 @@ class OSCMonitor:
 
         # listen for OSC events
         self.osc_server = OSC.OSCServer((ip, port))  
-        self.osc_server.addMsgHandler(msg, self.handler)   
+        self.osc_server.addMsgHandler(msg, self._handler)   
         self.osc_server.timeout = timeout
 
+        # clear the touch status
         self.last_fseq = -1
         self.touch_list = {}
         self.last_touch_list = {}
 
-        self.packet_trace = []
+        self.packet_trace = [] # short history of packet message strings
+
         # launch the monitor
         if self.monitor_enabled:
             Screen.wrapper(self.monitor_loop)
