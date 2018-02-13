@@ -523,31 +523,42 @@ class VBuf:
 
     
 
-# add static/dynamic/stream modes to the buffers
+
 class ShaderVBO:
     def __init__(self, shader, ixs, buffers={}, textures={}, vars={}, primitives=GL_QUADS):
         self.shader = shader
-        self.elt_bo = np_vbo.create_elt_buffer(ixs)
+        self.ibo = np_vbo.create_elt_buffer(ixs)
         
         self.buffers =  {}
         self.textures = {}
+        self.tex_names = {}
         self.uniforms = {}
         self.primitives = primitives
         
         self.buffers_used = {}
         with self.shader as s:
-            vbos = {}
+            vbos = []
             
             # set the locations from the shader given the buffer names
             for name,vbuf in buffers.items():
-                loc = self.shader.attribute_location(name)
-                vbuf.loc = loc
+                id = self.shader.attribute_location(name)
+                if id<0:
+                    raise GLSLError("Could not find attribute %s in shader" % name)
+                vbuf.id = id
+                print("attr: %s -> %d" % (name, id))
+                self.buffers[name] = vbuf
+                vbos.append(vbuf)
                 
             # bundle into a single vao
-            np_vbo.create_vao({v.loc:v.vbuf for v in buffers.values()}, {v.loc:v.divisor for v in buffer.values()})
+            self.vao = np_vbo.create_vao(vbos)
 
-            for slot,tex in textures.items():
-                self.textures[slot] = tex
+            for ix,(tex_name,tex) in enumerate(textures.items()):
+                # set the sampler to the respective texture unit
+                s.uniformi(tex_name, ix)       
+                print("texture: %s -> %d" % (name, ix))
+                self.tex_names[tex_name] = ix         
+                self.textures[ix] = tex
+
             for var, value in vars:
                 self.__setitem__(var, value)
         self.shader.unbind()
@@ -558,36 +569,13 @@ class ShaderVBO:
         if var in self.shader.active_uniforms:
             self.shader.__setitem__(var, value)
 
+    def set_texture(self, name, texture):
+        """Change the named texture to the given texture ID"""
+        self.textures[self.tex_names[name]] = texture
 
-
-    def attach_buffer(self, name, array):        
-        # attach a buffer to this object, from a numpy array
-        vbo = np_vbo.create_vbo(array)
-        loc = self.shader.attribute_location(name)
-        self.buffers_used[loc] = vbo
-        self.buffers[name] = (vbo, loc, array.shape)
-        return vbo, loc
-
-    def update_buffer(self, name, array):
-        # update the data in the vbo array
-        if name in self.buffers:
-            vbo, loc, shape = self.buffers[name]
-            if shape==array.shape:
-                vbo.set_data(array.ctypes.data)
-            else:
-                raise Exception("Array shape mismatch")
-
-    def draw(self):
-        self.shader.bind()
-
-        # attach all relevant textures
-        for t, tex in self.textures.items():
-            glActiveTexture(GL_TEXTURE0+t)
-            glBindTexture(tex.target, tex.id)
-
-     
-        self.shader.unbind()
-
+    def draw(self, vars={}, n_prims=0):
+        self.shader.draw(vao=self.vao, ibo=self.ibo, textures=self.textures, vars=vars, n_prims=n_prims, primitives=self.primitives)
+        
   
     
 

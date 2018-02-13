@@ -1,23 +1,23 @@
-import sys,time,os,random,cPickle, math
+import sys,time,os,random, math
 import traceback
-
-
 from ctypes import *
 import thread
 from pyglet.gl import *
 
+from pypuffersphere.utils import np_vbo, shader
+
 class OffscreenRenderer:
         
-        
-    def setup_texture(self, width, height, aspect=1.0):
-        self.ftarget, self.fbuf, self.frender = GLuint(), GLuint(), GLuint()
-        glGenTextures(1, self.ftarget)
-        glGenFramebuffers(1 ,self.fbuf)
-        
+    def __init__(self, width, height):
+        aspect = float(width)/float(height)
 
+        self.fbo_texture, self.fbo_buffer, self.fbo_renderbuffer = GLuint(), GLuint(), GLuint()
+        glGenTextures(1, self.fbo_texture)
+        glGenFramebuffers(1 ,self.fbo_buffer)
+        
         # bind the texture and set its parameters
         # create a texture
-        glBindTexture(GL_TEXTURE_2D, self.ftarget)
+        glBindTexture(GL_TEXTURE_2D, self.fbo_texture)
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE)
         glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,GL_REPEAT)
         glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT )
@@ -26,14 +26,14 @@ class OffscreenRenderer:
         glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_INT, None)
         
         # bind the frame buffer to the texture as the color render target
-        glBindFramebuffer(GL_FRAMEBUFFER, self.fbuf)
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.ftarget, 0)
+        glBindFramebuffer(GL_FRAMEBUFFER, self.fbo_buffer)
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.fbo_texture, 0)
 
         # create a depth buffer (as a render buffefr) and attach it        
-        glGenRenderbuffers(1, self.frender)
-        glBindRenderbuffer(GL_RENDERBUFFER, self.frender)
+        glGenRenderbuffers(1, self.fbo_renderbuffer)
+        glBindRenderbuffer(GL_RENDERBUFFER, self.fbo_renderbuffer)
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height)                
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, self.fbuf)
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, self.fbo_buffer)
 
         # unbind the framebuffer/renderbuffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
@@ -43,59 +43,20 @@ class OffscreenRenderer:
         self.aspect = aspect
         self.render_width = int(self.width*self.aspect)
         self.render_height = int(self.height)
-       
         
-    def __init__(self, width, height):
-        self.setup_texture(width, height, aspect = float(width)/float(height))
-        
-    def draw(self,width,height):
-        self.bind_offscreen_texture()
-        glEnable(GL_TEXTURE_2D)
-        self.fullscreen_quad(width,height)
-        
-    def fullscreen_quad(self, w, h):
-          
-          glBegin(GL_QUADS)          
-          glTexCoord2f(0.0,0.0)
-          glVertex3f(0,0,0) 
-          
-          glTexCoord2f(1.0,0.0)
-          glVertex3f(w,0,0)          
-          
-          glTexCoord2f(1.0,1.0)
-          glVertex3f(w,h,0)         
-          
-          glTexCoord2f(0.0,1.0)
-          glVertex3f(0,h,0)          
-          glEnd()
-
     
-    def set_ortho(self):
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()        
-        glOrtho(0, self.render_width, 0, self.render_height, -1, 500)
-        glMatrixMode(GL_MODELVIEW)
-        
-       
 
-    def begin_offscreen(self):
-        
+    def __enter__(self):        
         #enable render buffer
-        glBindFramebuffer(GL_FRAMEBUFFER, self.fbuf)
-        
-        # push the viewport and reset it 
-        glPushAttrib(GL_VIEWPORT_BIT)
+        glBindFramebuffer(GL_FRAMEBUFFER, self.fbo_buffer)        
+        self.real_viewport = (GLuint * 4)()
+        glGetIntegerv(GL_VIEWPORT, viewport)
         glViewport(0, 0, self.width, self.height)
         
         
-    def end_offscreen(self):
+    def __exit__(self, exc_type, exc_value, traceback):
         # disable render buffer        
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
-        glPopAttrib()
+        glViewport(*self.real_viewport)
         
-        
-        
-    def bind_offscreen_texture(self):
-        glBindTexture( GL_TEXTURE_2D, self.ftarget)
-        
-                
+      

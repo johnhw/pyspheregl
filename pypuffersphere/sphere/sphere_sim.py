@@ -260,11 +260,46 @@ class SphereRenderer(object):
         glEnable(GL_LIGHTING)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         glDrawElementsui(GL_TRIANGLES, self.faces.astype(np.uint32))
-        
+
+
+quad_vert = """
+#version 330 core
+
+// These are sent to the fragment shader
+out vec2 texCoord;      // UV coordinates of texture
+
+layout(location=0) in vec2 position;
+
+void main()
+{
+    gl_Position.xy = position;
+    texCoord = position;
+}
+"""
+
+quad_frag = """
+#version 330 core
+
+// from the vertex shader
+in vec2 texCoord;
+uniform sampler2D quadTexture;
+
+void main(void)
+{          
+     // look up the texture at the UV coordinates, with the given animation frame     
+     vec4 tex_color = texture2D(quadTexture, texCoord);
+     gl_FragColor = tex_color;
+     
+}
+
+"""
+
         
 class SphereViewer:
     def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, color=(1.0,1.0,1.0,1.0), simulate=True, auto_spin=False, draw_fn=None, tick_fn=None):
         self.simulate = simulate
+        self.quad_shader = shader.Shader(vert=[quad_vert], frag=[quad_frag])
+        
         self.size = sphere_resolution
         self.draw_fn = draw_fn
         self.exit_fn = exit_fn
@@ -321,10 +356,10 @@ class SphereViewer:
 
             
     def key(self, event, symbol, modifiers):
-        if symbol==pyglet.window.key.ESCAPE:
-            
+        if symbol==pyglet.window.key.ESCAPE:            
             if self.exit_fn:
                 self.exit_fn()
+            pyglet.app.exit()
             sys.exit(0)
                         
     
