@@ -267,13 +267,79 @@ quad_vert = """
 
 // These are sent to the fragment shader
 out vec2 texCoord;      // UV coordinates of texture
-
+out float alpha;        // Mask to remove out of circle texture
+out float illumination; // brightness of point
+out vec2 sphere;        // polar sphere coords
 layout(location=0) in vec2 position;
+uniform float rotate, tilt;
+
+#define M_PI 3.1415926535897932384626433832795
+
+vec2 az_to_polar(vec2 az)
+{
+    vec2 latlon;
+    latlon.x = -sqrt((az.x*az.x)+(az.y*az.y)) * M_PI + M_PI/2;
+    latlon.y = atan(az.y,az.x);
+    return latlon;    
+}
+
+vec3 spherical_to_cartesian(vec2 latlon)
+{
+    // Convert a lat, lon co-ordinate to an a Cartesian x,y,z point on the unit sphere.
+    vec3 cart;
+    float lon, lat;
+    lat = latlon.x;
+    lon = latlon.y;
+    lat += M_PI/2;
+    float st = sin(lat);
+    cart.x = cos(lon) * st;
+    cart.y = sin(lon) * st;
+    cart.z = -cos(lat);    
+    return cart;
+}   
+
+// From https://gist.github.com/neilmendoza/4512992
+mat4 rotationMatrix(vec3 axis, float angle)
+{
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+    
+    return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
+                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
+                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
+                0.0,                                0.0,                                0.0,                                1.0);
+
+                
+}
 
 void main()
 {
+    
+
+    vec2 polar = az_to_polar(position);
+    sphere = polar;
+    polar.y -= rotate;
+    
+    
+    vec4 pos = vec4(spherical_to_cartesian(polar),1);
+
+
     gl_Position.xy = position;
     gl_Position.z = 1;
+    gl_Position.xzy = (rotationMatrix(vec3(1,0,0), tilt) * pos).xyz;
+
+
+    // cut off all portions outside of the circle
+    float radius = sqrt((position.x*position.x)+(position.y*position.y));
+    alpha = 1.0-smoothstep(0.8,0.95, radius);
+    // cutoff the rear of the sphere
+    alpha *= smoothstep(0.0, 0.1, gl_Position.z);
+
+    illumination = gl_Position.z;
+
+    //if(gl_Position.z<0) alpha=0.0;
     gl_Position.w = 1;
     texCoord = position / 2.0 + 0.5;
 }
@@ -281,19 +347,36 @@ void main()
 
 quad_frag = """
 #version 330 core
+#define M_PI 3.1415926535897932384626433832795
+
 
 // from the vertex shader
 in vec2 texCoord;
+in vec2 sphere;
+in float alpha, illumination;
 uniform sampler2D quadTexture;
 
 void main(void)
 {          
      // look up the texture at the UV coordinates, with the given animation frame     
      vec4 tex_color = texture2D(quadTexture, texCoord);
+     tex_color.rgb *= illumination;
      gl_FragColor = tex_color;
-     
-  
-     
+
+    float grid_space = 10;
+    float grid_bright = 0.1;
+    float ycoord = sphere.y * grid_space;
+    float xcoord = sphere.x * grid_space;
+    // Compute anti-aliased world-space grid lines
+    float yline = abs(fract(ycoord - 0.5) - 0.5) / fwidth(ycoord);
+
+    // Compute anti-aliased world-space grid lines
+    float xline = abs(fract(xcoord - 0.5) - 0.5) / fwidth(xcoord);
+
+    // Just visualize the grid lines directly
+    gl_FragColor.rgb += grid_bright * (vec3(1.0 - min(xline, 1.0)) + vec3(1.0 - min(yline, 1.0)));
+    
+    gl_FragColor.a *= alpha;
      
      
 }
@@ -302,14 +385,12 @@ void main(void)
 from pypuffersphere.utils.graphics_utils import make_unit_quad_tile
 
 import os 
-def del_pass(*args, **kwargs):
-    raise Exception("WHO DID THIS!?")
 
 class SphereViewer:
     def make_quad(self):
         self.fbo = gloffscreen.FBOContext(self.size, self.size)
         self.quad_shader = shader.Shader(vert=[quad_vert], frag=[quad_frag])        
-        n_subdiv = 8
+        n_subdiv = 64
         
         quad_indices, quad_verts, quad_texs = make_unit_quad_tile(n_subdiv)    
 
@@ -357,7 +438,7 @@ class SphereViewer:
         self.rotate_scale = -0.2        
         self.frame_ctr = 0
         self.drag_start = None                
-        self.last_touch = time.clock()
+        self.last_touch = wall_clock()
         self.spin = 0
         self.target_spin = 0
 
@@ -378,16 +459,16 @@ class SphereViewer:
         if event=="press":        
             self.drag_start = (x,y)
             self.last_rotation = list(self.rotation)
-            self.last_touch = time.clock()
+            self.last_touch = wall_clock()
         if event=="drag":
             if self.drag_start is not None:
                 new_pos = (x,y)
                 self.rotation[0] = self.last_rotation[0] + (self.drag_start[0] - new_pos[0]) * self.rotate_scale
                 self.rotation[1] = self.last_rotation[1] + (self.drag_start[1] - new_pos[1]) * self.rotate_scale * 0.5
-                self.last_touch = time.clock()
+                self.last_touch = wall_clock()
         if event=="release":
             self.drag_start = None
-            self.last_touch = time.clock()
+            self.last_touch = wall_clock()
 
             
     def key(self, event, symbol, modifiers):
@@ -402,28 +483,18 @@ class SphereViewer:
         
         if self.tick_fn:
             self.tick_fn()
-        #self.redraw()
-        #self.draw_fn()
-
-        # if self.simulate:
-        #     self.sphere_renderer.begin()
-        # if self.draw_fn:
-        #     self.draw_fn()        
-        # if not self.simulate:
-        #     return
-        # self.sphere_renderer.end()
-        # self.redraw()        
-        
         
             
-        if time.clock()-self.last_touch>3 and self.auto_spin:
+        if wall_clock()-self.last_touch>3 and self.auto_spin:
             self.target_spin = 0.2        
         else:
             self.target_spin = 0.0
         
         self.spin = 0.9 *self.spin + 0.1*self.target_spin    
         self.rotation[0] += self.spin
-        
+
+        if wall_clock()-self.last_touch>0.1:
+            self.rotation[1] *= 0.95
         
     
                         
@@ -432,7 +503,6 @@ class SphereViewer:
         
         glEnable(GL_BLEND)        
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-
         # clear the screen
         glClearColor(0.1, 0.1, 0.1, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -441,8 +511,10 @@ class SphereViewer:
         with self.fbo as f:
             self.draw_fn()
 
+        #glEnable(GL_DEPTH_TEST)
         
-        self.quad.draw(n_prims=0)
+        self.quad.draw(n_prims=0, vars={"rotate":np.radians(self.rotation[0]), "tilt":float(np.radians(self.rotation[1]))})
+        #glDisable(GL_DEPTH_TEST)
  
         return
        
