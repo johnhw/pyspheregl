@@ -24,6 +24,8 @@ def make_gradient(img):
     
     color_array = np.mean(np.array(Image.open(img)), axis=1)
     return ColorGradient(color_array)
+
+    
     
 def fit_image(img, sz):
     # fit image into sz x sz square scaling and cropping as needed

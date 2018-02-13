@@ -8,7 +8,6 @@ out vec2 sphere;        // polar sphere coords
 layout(location=0) in vec2 position;
 uniform float rotate, tilt;
 
-
 void main()
 {
     // convert screen co-ordinates (in aximuthal) to polar

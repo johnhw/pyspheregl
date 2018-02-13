@@ -7,8 +7,11 @@ in vec2 sphere;
 in float alpha, illumination;
 uniform sampler2D quadTexture;
 
+layout(location=0) out vec4 frag_color;
+
 // allow a grid to be shown
-uniform float grid_space=10, grid_bright=0.1;
+uniform float grid_space=10;
+uniform float grid_bright=0.1;
 
 vec3 grid(vec2 sphere, float spacing)
 {
@@ -26,11 +29,9 @@ void main(void)
      // look up the texture at the UV coordinates
     vec4 tex_color = texture2D(quadTexture, texCoord);
     tex_color.rgb *= illumination;
-    gl_FragColor = tex_color;
-    gl_FragColor.rgb += grid_bright * grid(sphere, grid_space);
-
-    
-    gl_FragColor.a *= alpha;
+    frag_color = tex_color;
+    frag_color.rgb += grid_bright * grid(sphere, grid_space);    
+    frag_color.a *= alpha;
      
      
 }

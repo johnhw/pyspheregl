@@ -2,13 +2,13 @@ import numpy as np
 import pyglet
 from pyglet.gl  import *
 import time,sys,random,math,os
+import OSC
 
 import timeit
 wall_clock = timeit.default_timer
 
 from pypuffersphere.utils import glskeleton,  gloffscreen, np_vbo, shader
-
-
+from pypuffersphere.sphere import sphere
 from pypuffersphere.utils.graphics_utils import make_unit_quad_tile
 
 import os 
@@ -18,8 +18,15 @@ def resource_file(fname):
     return os.path.join(dir_path, "..", fname)
 
 
+
+ 
+
+
 class RotationManager:
-    def __init__(self, auto_spin=False):
+    def __init__(self, auto_spin=False, osc_port=3333):
+        self.osc_client = OSC.OSCClient()
+        self.osc_client.connect(('localhost', osc_port))
+
         self.auto_spin = auto_spin
         self.rotation = [0,0]
         self.last_rotation = [0,0]
@@ -36,6 +43,24 @@ class RotationManager:
         self.touch_pos = (0,0)
         self._sphere_point = (-1, -1) # updated all the time
         self.sphere_point = (-1, -1)  # updated only while the (right) mouse is down
+
+    def send_osc(self, addr, elements):
+        """Send a message to the given address
+        using the open OSC client connection"""
+        oscmsg = OSC.OSCMessage()
+        oscmsg.setAddress(addr)
+        for elt in elements:
+            oscmsg.append(elt)
+        self.osc_client.send(oscmsg)
+
+    def send_touch(self, polar):
+        """Send the simulated touches over OSC"""
+        lat, lon = polar 
+        tuio = sphere.polar_to_tuio(lon, lat)
+        self.send_osc("/tuio/2Dcur", ['alive'])
+        self.send_osc("/tuio/2Dcur", ['set', 0, tuio[0], tuio[1]])
+        self.send_osc("/tuio/2Dcur", ['fseq', self.frame_ctr])
+        self.frame_ctr += 1
 
     def press(self, x, y):
         self.drag_start = (x,y)
@@ -60,13 +85,15 @@ class RotationManager:
         self.touch_is_down = True
         self.touch_pos = (x,y)
         self.sphere_point = self._sphere_point
-
+        print(self.sphere_point)
+        
     def touch_release(self, x, y):
         self.touch_is_down = False
 
     def touch_drag(self, x, y):
         self.touch_pos = (x,y)
         self.sphere_point = self._sphere_point
+        
 
     def tick(self):
         if wall_clock()-self.last_touch>3 and self.auto_spin:
@@ -77,8 +104,12 @@ class RotationManager:
         self.spin = 0.9 *self.spin + 0.1*self.target_spin    
         self.rotation[0] += self.spin
 
-        if wall_clock()-self.last_touch>0.1:
+        if self.drag_start is None:
             self.rotation[1] *= 0.95
+
+        # send tuio if the touch is down
+        if self.touch_is_down:
+            self.send_touch(self.sphere_point)
 
     def get_rotation(self):
         return self.rotation
@@ -92,38 +123,61 @@ class RotationManager:
 def getshader(f):
     return resource_file(os.path.join("shaders", f))
 
+# have touch input monitor program
+# using asciimatics and zmq to broadcast the data
+
 class SphereViewer:
 
     def make_quad(self):
         # create the vertex buffers that will be used to reproject the sphere
         self.fbo = gloffscreen.FBOContext(self.size, self.size)
-        self.touch_fbo = gloffscreen.FBOContext(self.window_size[0], self.window_size[1])
+        self.touch_fbo = gloffscreen.FBOContext(self.window_size[0], self.window_size[1], texture=False)
         self.sphere_map_shader = shader.shader_from_file(verts=[getshader("sphere.vert"), getshader("sphere_map.vert")], 
                                                    frags=[getshader("sphere_map.frag")])        
 
         self.touch_shader = shader.shader_from_file(verts=[getshader("sphere.vert"), getshader("sphere_touch.vert")], 
                                                    frags=[getshader("sphere_touch.frag")])        
         
+
+        self.quad_shader = shader.shader_from_file(verts=[getshader("sphere.vert"), getshader("quad.vert")], 
+                                                   frags=[getshader("quad.frag")])        
+
         n_subdiv = 128        
         quad_indices, quad_verts, _ = make_unit_quad_tile(n_subdiv)    
         qverts = np_vbo.VBuf(quad_verts)      
         
         self.sphere_render = shader.ShaderVBO(self.sphere_map_shader, quad_indices, 
                                          buffers={"position":qverts},
-                                         textures={"quadTexture":self.fbo.texture})
+                                         textures={"quadTexture":self.fbo.texture},
+                                         vars={"grid_bright":self.debug_grid})
+
+
+        # simple quad render for testing
+        world_indices, world_verts, world_texs = make_unit_quad_tile(1)            
+
+        self.world_render = shader.ShaderVBO(self.quad_shader, world_indices, 
+                                         buffers={"position":np_vbo.VBuf(world_verts),
+                                         "tex_coord":np_vbo.VBuf(world_texs)},
+                                         textures={"quadTexture":self.world_texture.texture})
 
         # for getting touches back
         self.sphere_touch = shader.ShaderVBO(self.touch_shader, quad_indices, 
                                             buffers={"position":qverts})
 
         
+    def test_render(self):
+        self.world_render.draw(n_prims=0)
+      
 
-
-    def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, simulate=True, auto_spin=False, draw_fn=None, tick_fn=None):
+    def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, simulate=True, auto_spin=False, draw_fn=None, tick_fn=None, 
+        debug_grid=0.1, test_render=False):
         self.simulate = simulate
-        
+        self.debug_grid = debug_grid # overlaid grid on sphere simulation
         self.size = sphere_resolution
-        self.draw_fn = draw_fn
+        if not test_render:            
+            self.draw_fn = draw_fn
+        else:
+            self.draw_fn = self.test_render # simple test function to check rendering
         self.exit_fn = exit_fn
         self.tick_fn = tick_fn        
         self.window_size = window_size
@@ -134,6 +188,7 @@ class SphereViewer:
         self.skeleton = glskeleton.GLSkeleton(draw_fn = self.redraw, resize_fn = self.resize, 
         tick_fn=self.tick, mouse_fn=self.mouse, key_fn=self.key, window_size=window_size)
 
+        
 
         if not self.simulate:
             cx = window_size[0] - sphere_resolution
@@ -197,6 +252,8 @@ class SphereViewer:
         # clear the screen
         glClearColor(0.1, 0.1, 0.1, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+                 
         
         if not self.simulate:
             self.draw_fn()
@@ -204,26 +261,31 @@ class SphereViewer:
             # draw onto the FBO texture
             with self.fbo as f:
                 self.draw_fn()
+                
 
             # render onto the screen using the sphere distortion shader    
             rotate, tilt = self.rotation_manager.get_rotation()
             self.sphere_render.draw(n_prims=0, vars={"rotate":np.radians(rotate), "tilt":np.radians(tilt)})
-
+            
             
             # render the image for the touch point look up
             with self.touch_fbo as f:
+            
                 self.sphere_touch.draw(n_prims=0, vars={"rotate":np.radians(rotate), "tilt":np.radians(tilt)})
-                pixel_data = (GLubyte * 3)()
+                
+                pixel_data = (GLubyte * 4)()
                 # get window coordinates
                 mx, my = self.rotation_manager.get_mouse_pos()                
+                
                 # read the pixels, convert back to radians (from unsigned bytes)
-                glReadPixels(mx, my, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel_data)                                
+                glReadPixels(mx, my, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel_data)                                
+                
                 sphere_lat, sphere_lon = ((pixel_data[0] / 255.0) -0.5) * np.pi, ((pixel_data[1]/255.0)-0.5)*2*np.pi                
                 # tell the touch manager where the touch is
                 self.rotation_manager.set_sphere_touch(sphere_lat, sphere_lon)
+
+        
     
-            
-       
 SPHERE_WIDTH = 2560
 SPHERE_HEIGHT = 1600
 SPHERE_SIZE = 1920 # estimated to compensate for the partial sphere coverage
@@ -240,3 +302,4 @@ def make_viewer(**kwargs):
         s = SphereViewer(sphere_resolution=SPHERE_SIZE, window_size=(SPHERE_WIDTH,SPHERE_HEIGHT), background=None, simulate=False, **kwargs)
         print("Non-simulated")
     return s
+

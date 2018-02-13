@@ -30,6 +30,10 @@ class GLSkeleton:
         self.window.set_handler("on_mouse_drag", self.on_mouse_drag)  
         self.window.set_handler("on_resize", self.on_resize)      
         self.w, self.h = self.window.width, self.window.height
+
+        print("OpenGL version", pyglet.gl.gl_info.get_version(), pyglet.gl.gl_info.get_vendor())
+        
+        
         
 
     def on_resize(self, w, h):            

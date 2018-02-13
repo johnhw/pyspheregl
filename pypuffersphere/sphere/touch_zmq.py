@@ -1,0 +1,206 @@
+import zmq
+import OSC
+from asciimatics.screen import Screen
+import fire
+import timeit
+import sphere
+import numpy as np
+wall_clock = timeit.default_timer
+
+
+
+ascii_sphere = """    
+    
+    ____
+  .X+.   .
+.Xx+-.     .
+XXx++-..
+XXxx++--..  
+`XXXxx+++--'
+  `XXXxxx'
+     ""       """
+
+class OSCMonitor:
+    
+    def handler(self, addr, tags, data, client_addr):
+        self.last_packet = wall_clock()        
+        
+        # store a trace of recent packets
+        self.packet_trace.append(("%4.1f: "%self.last_packet) + "\t".join([str(d) for d in data]))
+        if len(self.packet_trace)>10:
+                self.packet_trace.pop(0)
+
+        # we have data, decode it
+        if len(data)>0:
+            # decode the OSC packet
+            if data[0]=='fseq':
+                # frame complete
+                self.last_fseq = data[1]
+                self.last_touch_list = self.touch_list
+                self.touch_list = {}                
+                # broadcast the touch event
+                self.zmq_socket.send("TOUCH", json.dumps({"touches":self.last_touch_list, 
+                                                            "fseq":self.last_fseq, 
+                                                            "t":self.last_packet}))
+            
+            # a single touch, accumulate into touch buffer
+            if data[0]=='set':
+                self.touch_list[data[1]] = data[2], data[3]
+            
+            # system is alive
+            if data[0]=='alive':
+                pass
+        
+        # advertise that we are still alive
+        self.zmq_socket.send("ALIVE %f"%self.last_packet)
+
+    def render_sphere(self, screen, touch_list):
+        touches = sorted(touch_list.keys())
+        sphere_1x = 44
+        sphere_2x = 66
+        sphere_y = 8
+        sphere_rad = 6
+        # print the sphere
+        for i,line in enumerate(ascii_sphere.splitlines()):
+            screen.print_at(line, sphere_1x, sphere_y+i, colour=screen.COLOUR_BLUE)
+            
+            screen.print_at(line, sphere_2x, sphere_y+i, colour=screen.COLOUR_MAGENTA)
+        screen.print_at("BACK", sphere_1x+4, sphere_y+1, colour=screen.COLOUR_BLUE)
+        screen.print_at("FRONT", sphere_2x+3, sphere_y+1, colour=screen.COLOUR_MAGENTA)
+        
+        # print the touch positions
+        for touch in touches:
+            pos = touch_list.get(touch)
+            x, y = pos
+            lon, lat = sphere.tuio_to_polar(x,y)
+            cz, cx, cy = sphere.spherical_to_cartesian((lon, lat))
+            # compute ASCII coordinates
+            sphere_cy = sphere_y+sphere_rad
+            if cz<0:
+                sphere_cx = sphere_1x+sphere_rad                 
+            else:
+                sphere_cx = sphere_2x+sphere_rad
+            px = sphere_cx - cx * sphere_rad
+            py = sphere_cy + cy * sphere_rad * 0.6
+            
+            screen.print_at("X", int(px), int(py),  colour=screen.COLOUR_WHITE, bg=screen.COLOUR_CYAN)
+
+
+
+    def update_display(self, screen):
+        t = wall_clock()
+        delta_t = t - self.last_packet
+
+        # limit update rate
+        if t-self.last_frame<0.2:
+            return
+
+        self.last_frame = t
+
+        # status line
+        screen.print_at("MSG: %15s" % self.msg, 0, 0, colour=screen.COLOUR_CYAN)
+        screen.print_at("OSC: %10s:%5d" % (self.osc_ip, self.osc_port), 25, 0, colour=screen.COLOUR_YELLOW)
+        #screen.print_at("OSCIP: %10s" % self.osc_ip, 44, 0, colour=screen.COLOUR_WHITE)
+        screen.print_at("ZMQ: %5d" % self.zmq_port, 66, 0, colour=screen.COLOUR_MAGENTA)
+
+        # fseq and ntouches
+        fseq_x = 44
+        screen.print_at("FSEQ:%8d" % self.last_fseq, fseq_x, 2, colour=screen.COLOUR_CYAN)
+        screen.print_at("NTOUCH:%2d" % len(self.last_touch_list), 66, 2, colour=screen.COLOUR_BLUE)        
+
+        if self.full_trace:
+            # dump the last packets to come through        
+            for i,packet in enumerate(self.packet_trace):      
+                if "fseq" in packet:
+                    fg = screen.COLOUR_CYAN
+                if "alive" in packet:
+                    fg = screen.COLOUR_WHITE
+                if "set" in packet:
+                    fg = screen.COLOUR_YELLOW
+                screen.print_at(packet+" "*35, 0, 6+i, colour=fg, bg=screen.COLOUR_BLACK)
+                
+            touch_list = dict(self.last_touch_list)
+
+            # copy the touch list and print it out        
+            for i in range(10):
+                pos = touch_list.get(i)
+                if pos:
+                    x, y = pos
+                    lon, lat = sphere.tuio_to_polar(x,y)
+                    screen.print_at("(%1d) %+1.4f %+1.4f \t lon:%3.0f lat:%3.0f" % (i, x, y, np.degrees(lon), np.degrees(lat)), fseq_x, i+3, colour=screen.COLOUR_YELLOW)
+                else:
+                    screen.print_at(" "*40, fseq_x, i+3, colour=screen.COLOUR_YELLOW)
+
+            # render the sphere view
+            self.render_sphere(screen, touch_list)
+
+        # print out the heartbeat status
+        bg = screen.COLOUR_BLACK
+        fg = screen.COLOUR_WHITE
+        # danger...
+        if delta_t>1.0:
+            fg = screen.COLOUR_RED
+        # it's gone; go full red
+        if delta_t>5:
+            fg = screen.COLOUR_BLACK
+            bg = screen.COLOUR_RED
+            
+        screen.print_at("HEART:%5.1f" % delta_t, 0,2, colour=fg, bg=bg)
+        screen.refresh()
+
+    def monitor_loop(self, screen):
+        """Enter an infinite loop, handling OSC requests and broadcasting
+        them over ZMQ"""
+        if screen:
+            screen.clear()
+        while True:
+            self.osc_server.handle_request()
+            if screen:
+                self.update_display(screen)
+
+            # clear touch list if it gets stale
+            if wall_clock()-self.last_packet>0.25:                
+                self.last_touch_list = {}
+                self.last_fseq = -1
+            
+
+
+    def monitor(self, port=3333, zmq_port=4000, ip="127.0.0.1", msg="/tuio/2Dcur", timeout=0.1, full_trace=False, monitor=True):
+        """Listen to OSC messages on 3333. 
+        Broadcast on the ZMQ PUB stream on the given TCP port."""        
+        
+        self.monitor_enabled = monitor
+        self.msg = msg
+        self.last_packet = wall_clock()
+        self.last_frame = wall_clock()
+        self.osc_port = port
+        self.osc_ip = ip
+        self.zmq_port = zmq_port
+
+        self.full_trace = full_trace
+        # create a ZMQ port to broadcast on
+        context = zmq.Context()
+        self.zmq_socket = context.socket(zmq.PUB)
+        self.zmq_socket.bind("tcp://*:%s" % zmq_port)
+
+        # listen for OSC events
+        self.osc_server = OSC.OSCServer((ip, port))  
+        self.osc_server.addMsgHandler(msg, self.handler)   
+        self.osc_server.timeout = timeout
+
+        self.last_fseq = -1
+        self.touch_list = {}
+        self.last_touch_list = {}
+
+        self.packet_trace = []
+        # launch the monitor
+        if self.monitor_enabled:
+            Screen.wrapper(self.monitor_loop)
+        else:
+            self.monitor_loop(False)
+                
+
+
+if __name__ == "__main__":
+   fire.Fire(OSCMonitor)
+

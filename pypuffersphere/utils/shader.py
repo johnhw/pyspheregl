@@ -36,12 +36,13 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
   
 """
-import pyglet.gl as gl
+
 from pyglet.gl import *
 from ctypes import *
 import contextlib
 import numpy as np
 import np_vbo
+import pyglet.gl as gl
 
 class GLSLError(Exception):
     pass
@@ -74,9 +75,12 @@ def shader_from_file(verts, frags, path="shaders"):
     for frag in frags:
         with open(os.path.join(path,frag)) as f:
                 f_shaders.append(f.read())
-        
+
+    print("-"*80)         
     print('\nCompiling shader: %s, %s' % (verts, frags))
+    
     _shader = Shader(v_shaders, f_shaders)
+    print("-"*80)
     return _shader
 
 class Shader:
@@ -118,30 +122,25 @@ class Shader:
         # compile the shader
         glCompileShader(shader)
 
-        temp = c_int(0)
+        status = c_int(0)        
         # retrieve the compile status
-        glGetShaderiv(shader, GL_COMPILE_STATUS, byref(temp))
+        glGetShaderiv(shader, GL_COMPILE_STATUS, byref(status))
+        temp = c_int(0)
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, byref(temp))
+        # create a buffer for the log
+        buffer = create_string_buffer(temp.value)
+        # retrieve the log text
+        glGetShaderInfoLog(shader, temp, None, buffer)
+           
+        print(buffer.value)
         
-        # if compilation failed, print the log
-        if not temp:
-            # retrieve the log lengthio
-            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, byref(temp))
-            # create a buffer for the log
-            buffer = create_string_buffer(temp.value)
-            # retrieve the log text
-            glGetShaderInfoLog(shader, temp, None, buffer)
-            # print the log to the console
-            print buffer.value
+        if not status:
+            
+            raise GLSLError("Failed to compile shader")
         else:
             # all is well, so attach the shader to the program
             glAttachShader(self.handle, shader);            
-            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, byref(temp))
-            # create a buffer for the log
-            buffer = create_string_buffer(temp.value)
-            # retrieve the log text
-            glGetShaderInfoLog(shader, temp, None, buffer)
-
-            print buffer.value
+        
            
             
             
@@ -152,25 +151,23 @@ class Shader:
         # link the program
         glLinkProgram(self.handle)
 
-        temp = c_int(0)
+        status = c_int(0)
         # retrieve the link status
-        glGetProgramiv(self.handle, GL_LINK_STATUS, byref(temp))
-
-        # if linking failed, print the log
-        if not temp:
-            #    retrieve the log length
-            glGetProgramiv(self.handle, GL_INFO_LOG_LENGTH, byref(temp))
-            # create a buffer for the log
-            buffer = create_string_buffer(temp.value)
-            # retrieve the log text
-            glGetProgramInfoLog(self.handle, temp, None, buffer)
-            # print the log to the console
-            print buffer.value
-
-            sys.exit()
+        glGetProgramiv(self.handle, GL_LINK_STATUS, byref(status))
+        temp = c_int(0)
+        # create a buffer for the log
+        glGetProgramiv(self.handle, GL_INFO_LOG_LENGTH, byref(temp))
+        buffer = create_string_buffer(temp.value)        
+        glGetProgramInfoLog(self.handle, temp, None, buffer)        
+        print(buffer.value)
+        
+        if not status:            
+            raise GLSLError("Failed to link shader")
         else:
             # all is well, so we are linked
+            glGetProgramiv(self.handle, GL_INFO_LOG_LENGTH, byref(temp))            
             self.linked = True
+
         AUL = GLint()
         glGetProgramiv(self.handle, GL_ACTIVE_UNIFORM_MAX_LENGTH,
                           byref(AUL))
@@ -406,14 +403,14 @@ class Shader:
         count = var_info['array']
   
         if var_info['kind'] in ['int']:
-            data_type = gl.GLint
+            data_type = GLint
         else:
-            data_type = gl.GLfloat
+            data_type = GLfloat
   
-        assert gl.glIsProgram(self.handle) == True
+        assert glIsProgram(self.handle) == True
         assert self.linked
   
-        loc = gl.glGetUniformLocation(self.handle, var)
+        loc = glGetUniformLocation(self.handle, var)
   
         if loc == -1:
             raise RuntimeError("Could not query uniform location "
@@ -478,16 +475,16 @@ class Shader:
         var_info = self._uniform_type_info[var]
         data = container_nested()
   
-        if dtype == gl.GLint:
-            get_func = gl.glGetUniformiv
+        if dtype == GLint:
+            get_func = glGetUniformiv
         else:
-            get_func = gl.glGetUniformfv
+            get_func = glGetUniformfv
   
         alen = var_info['array']
         for i in range(alen):
             if i > 0:
                 # Query the location of each array element
-                loc = gl.glGetUniformLocation(self.handle, var + '[%d]' % i)
+                loc = glGetUniformLocation(self.handle, var + '[%d]' % i)
   
             assert loc != -1
   
@@ -510,23 +507,10 @@ class Shader:
 
 
 
-import itertools
 
 
-# get all of the uniform calls (nasty!)
-utypes = {}
-
-for f,vec,cnt in itertools.product(["f", "i", "ui"], ["","v"], "1234"):
-    utypes[cnt+f+vec] = globals()['glUniform'+cnt+f+vec]
-
-for mat in ["2", "3", "4", "2x3", "3x2", "2x4", "4x2", "3x4", "4x3"]:
-    utypes[mat]= globals()['glUniformMatrix'+mat+"fv"]
 
 
-def shader_dump(handle):
-
-    n_uniforms = glGetProgram(GL_ACTIVE_UNIFORMS)
-    glGetActiveUniform(handle, i, )
 
 
 
@@ -553,6 +537,7 @@ class ShaderVBO:
             # set the locations from the shader given the buffer names
             for name,vbuf in buffers.items():
                 id = self.shader.attribute_location(name)
+                print(name)
                 if id<0:
                     raise GLSLError("Could not find attribute %s in shader" % name)
                 vbuf.id = id
@@ -570,7 +555,7 @@ class ShaderVBO:
                 self.tex_names[tex_name] = ix         
                 self.textures[ix] = tex
 
-            for var, value in vars:
+            for var, value in vars.items():
                 self.__setitem__(var, value)
         self.shader.unbind()
 
@@ -584,9 +569,19 @@ class ShaderVBO:
         """Change the named texture to the given texture ID"""
         self.textures[self.tex_names[name]] = texture
 
-    def draw(self, vars=None, n_prims=0):
+    def draw(self, vars=None, n_prims=0, textures=None):
         vars = vars or {}
-        self.shader.draw(vao=self.vao, ibo=self.ibo, textures=self.textures, vars=vars, n_prims=n_prims, primitives=self.primitives)
+        # either use the default textures
+        if textures is None:
+            textures = self.textures
+        else:
+            # or remap them here
+            textures = {}
+            for ix,(tex_name,tex) in enumerate(textures.items()):
+                s.uniformi(tex_name, ix) 
+                textures[ix] = tex
+
+        self.shader.draw(vao=self.vao, ibo=self.ibo, textures=textures, vars=vars, n_prims=n_prims, primitives=self.primitives)
         
   
     
