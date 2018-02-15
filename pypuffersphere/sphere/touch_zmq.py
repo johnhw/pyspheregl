@@ -8,13 +8,14 @@ import sphere
 import numpy as np
 wall_clock = timeit.default_timer
 
+# logger for debug messages, when handling socket comms
 import logging
 logging.basicConfig(filename='touch_zmq.log', level=logging.DEBUG, 
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger=logging.getLogger(__name__)
 
 
-
+# Nice sphere :)
 ascii_sphere = """    
     
     ____
@@ -28,8 +29,6 @@ XXxx++--..
 
 class OSCMonitor:
     
-    
-
     def render_sphere(self, screen, touch_list):
         touches = sorted(touch_list.keys())
         sphere_1x = 44
@@ -70,7 +69,7 @@ class OSCMonitor:
         # limit update rate
         if t-self.last_frame<0.2:
             return
-
+        
         self.last_frame = t 
 
         # status line
@@ -99,16 +98,15 @@ class OSCMonitor:
                 
             touch_list = dict(self.last_touch_list)
 
-            # copy the touch list and print it out        
-            for i in range(10):
-                pos = touch_list.get(i)
-                if pos:
-                    x, y = pos
-                    lon, lat = sphere.tuio_to_polar(x,y)
-                    screen.print_at("(%1d) %+1.4f %+1.4f \t lon:%3.0f lat:%3.0f" % (i, x, y, np.degrees(lon), np.degrees(lat)), fseq_x, i+3, colour=screen.COLOUR_YELLOW)
-                else:
-                    screen.print_at(" "*40, fseq_x, i+3, colour=screen.COLOUR_YELLOW)
+            # clear the touches
+            for i in range(20):
+                screen.print_at(" "*50, fseq_x, i+3)
 
+            # copy the touch list and print it out        
+            for i,(touch_id, (x,y)) in enumerate(touch_list.items()):                                    
+                    lon, lat = sphere.tuio_to_polar(x,y)
+                    screen.print_at("(%05d) %+1.4f %+1.4f \t lon:%3.0f lat:%3.0f" % (i, x, y, np.degrees(lon), np.degrees(lat)), fseq_x, i+3, colour=screen.COLOUR_YELLOW)
+                
             # render the sphere view
             self.render_sphere(screen, touch_list)
 
@@ -125,7 +123,9 @@ class OSCMonitor:
             
         screen.print_at("HEART:%5.1f" % delta_t, 0,2, colour=fg, bg=bg)
         screen.refresh()
-
+    
+    # the actual message handler
+    # reads OSC messages, broadcasts ZMQ back
     def handler(self, addr, tags, data, client_addr):
         self.last_packet = wall_clock()        
         

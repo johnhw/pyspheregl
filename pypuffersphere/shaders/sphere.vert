@@ -10,6 +10,29 @@ vec2 az_to_polar(vec2 az)
     return latlon;    
 }
 
+vec2 cartesian_to_polar(vec3 cartesian)
+{
+    vec3 norm_pos = normalize(cartesian);
+    float lat = acos(norm_pos.z) - M_PI/2;
+    float lon = atan(norm_pos.y, norm_pos.x);
+    return vec2(lat, lon);
+}
+
+
+
+vec3 polar_to_azimuthal(vec2 polar)
+{
+    vec3 az;
+    float lat = polar.x;
+    float lon = polar.y;
+    float r = (M_PI/2-lat)/M_PI;
+    az.x = r * cos(lon);
+    az.y = r * sin(lon);
+    az.z = r;
+    return az;
+}
+
+
 vec3 spherical_to_cartesian(vec2 latlon)
 {
     // Convert a lat, lon co-ordinate to an a Cartesian x,y,z point on the unit sphere.
