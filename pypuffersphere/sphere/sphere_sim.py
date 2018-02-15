@@ -56,7 +56,7 @@ class SphereViewer:
 
         # this will hold positions of active touches for drawing
         self.touch_pts = np.zeros((32, 2))
-        
+        self.touch_pts[:,0] = -np.pi
         self.touch_buf = np_vbo.VBuf(self.touch_pts)
         self.touch_render = shader.ShaderVBO(self.finger_point_shader, 
                                          np.arange(len(self.touch_pts)), 
@@ -166,6 +166,7 @@ class SphereViewer:
 
         # enable point drawing for touch point
         glEnable(GL_POINT_SMOOTH)
+        glEnable(GL_POINT_SPRITE)
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
                  
         
