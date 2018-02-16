@@ -1,5 +1,7 @@
 
 #version 330 core
+#define version_set 330
+
 #define M_PI 3.1415926535897932384626433832795
 
 vec2 az_to_polar(vec2 az)

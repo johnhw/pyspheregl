@@ -17,6 +17,7 @@ class RotationManager:
         self.drag_start = None                
         self.last_touch = wall_clock()
         self.spin = 0
+        self.touch_id = 0
         self.target_spin = 0
         self.auto_spin = False
 
@@ -35,12 +36,14 @@ class RotationManager:
             oscmsg.append(elt)
         self.osc_client.send(oscmsg)
 
-    def send_touch(self, polar):
+    def send_touch(self, polar=None):
         """Send the simulated touches over OSC"""
-        lat, lon = polar 
-        tuio = sphere.polar_to_tuio(lon, lat)
+        
         self.send_osc("/tuio/2Dcur", ['alive'])
-        self.send_osc("/tuio/2Dcur", ['set', 0, tuio[0], tuio[1]])
+        if polar:
+            lat, lon = polar 
+            tuio = sphere.polar_to_tuio(lon, lat)
+            self.send_osc("/tuio/2Dcur", ['set', self.touch_id, tuio[0], tuio[1]])        
         self.send_osc("/tuio/2Dcur", ['fseq', self.frame_ctr])
         self.frame_ctr += 1
 
@@ -77,6 +80,7 @@ class RotationManager:
         
     def touch_release(self, x, y):
         self.touch_is_down = False
+        self.touch_id += 1 # make sure we have unique ids for each simulated touch
 
     def touch_drag(self, x, y):
         self.touch_pos = (x,y)
@@ -95,9 +99,12 @@ class RotationManager:
         if self.drag_start is None:
             self.rotation[1] *= 0.95
 
-        # send tuio if the touch is down
+        # send tuio if the touch is down        
         if self.touch_is_down:
+            
             self.send_touch(self.sphere_point)
+        else:            
+            self.send_touch(None)
 
     def get_rotation(self):
         return self.rotation

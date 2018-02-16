@@ -3,8 +3,6 @@ import numpy as np
 import pyglet
 from pyglet.gl  import *
 import time,sys,random,math,os
-
-
 import timeit
 wall_clock = timeit.default_timer
 
@@ -13,14 +11,28 @@ from pypuffersphere.sphere import sphere
 from pypuffersphere.utils.graphics_utils import make_unit_quad_tile
 from pypuffersphere.sphere.sim_rotation_manager import RotationManager
 
+import json
 
+class TouchManager:
+    def __init__(self, zmq_address="localhost:3333"):
+        # create a zmq receiver and subscribe to touch events
+        context = zmq.Context()
+        socket = context.socket(zmq.SUB)
+        socket.setsockopt("TOUCH", zmq.SUBSCRIBE)
+        socket.connect(zmq_address)
+        self.socket = socket
+
+    def listen(self):
+        parts = socket.recv_multipart()
+        if len(parts)==2:
+            json_data = parts[-1]
+            touch_data = json.loads(json_data)
 
 
 
 def resource_file(fname):
     dir_path = os.path.dirname(os.path.realpath(__file__))        
     return os.path.join(dir_path, "..", fname)
-
 
 
 
@@ -80,9 +92,10 @@ class SphereViewer:
         self.world_render.draw(n_prims=0)
       
 
-    def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, simulate=True, auto_spin=False, draw_fn=None, tick_fn=None, 
-        debug_grid=0.1, test_render=False):
+    def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, simulate=True, auto_spin=False, draw_fn=None, 
+        tick_fn=None, debug_grid=0.01, test_render=False, show_touches=True):
         self.simulate = simulate
+        self.show_touches = show_touches
         self.debug_grid = debug_grid # overlaid grid on sphere simulation
         self.size = sphere_resolution
         if not test_render:            
@@ -155,7 +168,13 @@ class SphereViewer:
                 
         self.rotation_manager.tick()
             
-    
+    def draw_touch_points(self):
+        # draw the touch points
+        pt = self.rotation_manager.get_touch_point()
+        self.touch_pts[0,:] = pt
+        self.touch_buf.set(self.touch_pts)
+        self.touch_render.draw(n_prims=0)
+        
                         
     def redraw(self):  
         glEnable(GL_BLEND)        
@@ -172,14 +191,12 @@ class SphereViewer:
         
         if not self.simulate:
             self.draw_fn()
+            self.draw_touch_points()
         else:
             # draw onto the FBO texture
             with self.fbo as f:
-                self.draw_fn()                
-                pt = self.rotation_manager.get_touch_point()
-                self.touch_pts[0,:] = pt
-                self.touch_buf.set(self.touch_pts)
-                self.touch_render.draw(n_prims=0)
+                self.draw_fn()      
+                self.draw_touch_points()          
                 
 
             # render onto the screen using the sphere distortion shader    

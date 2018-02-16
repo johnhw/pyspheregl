@@ -14,6 +14,74 @@ logging.basicConfig(filename='touch_zmq.log', level=logging.DEBUG,
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger=logging.getLogger(__name__)
 
+# convert raw frame positions into a stream of events
+# either up, drag or down
+class TouchManager:
+    def __init__(self):
+        self.touches = {}
+        self.frame_touches = {}
+        # stable, but low numbered slots
+        self.slots = {}        
+        
+
+    def touch(self, id, x, y):
+        lon, lat = sphere.tuio_to_polar(x,y)
+        self.frame_touches[id] = (lon, lat)
+
+    def touch_frame(self, fseq, t):
+        # a new complete frame is issued
+        existing, this_frame = set(self.touches.keys()), set(self.frame_touches.keys())        
+        down, move, up = this_frame-existing, this_frame&existing, existing-this_frame
+
+        events = {}
+        for touch in down:
+            # new touch down
+
+            # find a slot
+            slot = 0
+            while slot in self.slots:
+                slot += 1
+            self.slots[slot] = True
+
+            # create the event
+            events[touch] = {"event":"DOWN",                                 
+                            "lonlat":self.frame_touches[touch],
+                            "slot":slot,
+                            "duration":0.0}
+            
+            self.touches[touch] = {"lonlat":self.frame_touches[touch], "t":t, "fseq":fseq, "slot":slot}
+            
+            
+        for touch in move:
+            # touch move
+            events[touch] = {"event":"DRAG",                                 
+                             "lonlat":self.frame_touches[touch],
+                             "slot":self.touches[touch]["slot"],
+                             "origin":self.touches[touch]["lonlat"],
+                             "duration":t-self.touches[touch]["t"]
+                             }
+
+        for touch in up:
+            # touch up
+            events[touch] = {"event":"UP", 
+                            "slot":self.touches[touch]["slot"],
+                            "lonlat":self.touches[touch]["lonlat"],
+                            "duration":t-self.touches[touch]["t"]}       
+            
+            # remove the slot it was using            
+            del self.slots[self.touches[touch]["slot"]]
+            del self.touches[touch]
+
+        self.frame_touches = {}
+        
+        return {"events":events, "t":t, "fseq":fseq}
+
+    def all_up(self):
+        self.frame_touches = {}        
+
+
+
+
 
 # Nice sphere :)
 ascii_sphere = """    
@@ -136,22 +204,33 @@ class OSCMonitor:
 
         # we have data, decode it
         if len(data)>0:
+            
             # decode the OSC packet
             if data[0]=='fseq':
                 # frame complete
                 self.last_fseq = data[1]
                 self.last_touch_list = self.touch_list
                 self.touch_list = {}                
-                # broadcast the touch event
+                # broadcast the raw touches themselves
                 self.zmq_socket.send_multipart(["TOUCH", json.dumps({"touches":self.last_touch_list, 
                                                             "fseq":self.last_fseq, 
                                                             "stale":0,
                                                             "t":self.last_packet})])
+                
+                events = self.touch_manager.touch_frame(self.last_fseq, self.last_packet)
+                
+                if len(events["events"])>0:                    
+                    # broadcast the events (UP/DOWN/DRAG)
+                    print(events)
+                    self.zmq_socket.send_multipart(["TOUCH_EVENT", json.dumps(events)])
+                                    
             
             # a single touch, accumulate into touch buffer
             if data[0]=='set':
-                self.touch_list[data[1]] = data[2], data[3]
-            
+                touch_id, x, y = data[1:]
+                self.touch_list[touch_id] = x, y
+                self.touch_manager.touch(touch_id, x, y)
+                
             # system is alive
             if data[0]=='alive':
                 pass
@@ -182,20 +261,25 @@ class OSCMonitor:
                                                             "stale":1,
                                                             "t":wall_clock()}))])
 
+                # make sure any touches are up
+                self.touch_manager.all_up()
+                self.zmq_socket.send_multipart(["TOUCH_EVENT", (json.dumps(self.touch_manager.touch_frame(fseq=-2, t=wall_clock())))])
+
+
     def _handler(self, *args, **kwargs):
         try:
             self.handler(*args, **kwargs)
         except Exception as err:
             # make sure we log exceptions to disk
-            logger.error(err)
+            logger.exception(err)
             self.last_exception = str(err)
 
     
-    def monitor(self, port=3333, zmq_port=4000, ip="127.0.0.1", msg="/tuio/2Dcur", timeout=0.2, full_trace=False, monitor=True):
+    def monitor(self, port=3333, zmq_port=4000, ip="127.0.0.1", msg="/tuio/2Dcur", timeout=0.2, full_trace=False, console=True):
         """Listen to OSC messages on 3333. 
         Broadcast on the ZMQ PUB stream on the given TCP port."""        
         
-        self.monitor_enabled = monitor
+        self.monitor_enabled = console
         self.msg = msg
         self.osc_port = port
         self.osc_ip = ip
@@ -224,6 +308,9 @@ class OSCMonitor:
         self.touch_list = {}
         self.last_touch_list = {}
 
+        # touches currently down, including their down location and current location
+        self.touch_manager = TouchManager()
+        
         self.packet_trace = [] # short history of packet message strings
 
         # launch the monitor
