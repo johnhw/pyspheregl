@@ -10,23 +10,7 @@ from pypuffersphere.utils import glskeleton,  gloffscreen, np_vbo, shader
 from pypuffersphere.sphere import sphere
 from pypuffersphere.utils.graphics_utils import make_unit_quad_tile
 from pypuffersphere.sphere.sim_rotation_manager import RotationManager
-
-import json
-
-class TouchManager:
-    def __init__(self, zmq_address="localhost:3333"):
-        # create a zmq receiver and subscribe to touch events
-        context = zmq.Context()
-        socket = context.socket(zmq.SUB)
-        socket.setsockopt("TOUCH", zmq.SUBSCRIBE)
-        socket.connect(zmq_address)
-        self.socket = socket
-
-    def listen(self):
-        parts = socket.recv_multipart()
-        if len(parts)==2:
-            json_data = parts[-1]
-            touch_data = json.loads(json_data)
+from pypuffersphere.sphere.touch_manager import ZMQTouchHandler
 
 
 
@@ -93,7 +77,8 @@ class SphereViewer:
       
 
     def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, simulate=True, auto_spin=False, draw_fn=None, 
-        tick_fn=None, debug_grid=0.01, test_render=False, show_touches=True):
+        tick_fn=None, debug_grid=0.01, test_render=False, show_touches=True,
+        zmq_address="tcp://localhost:4000", touch_fn=None):
         self.simulate = simulate
         self.show_touches = show_touches
         self.debug_grid = debug_grid # overlaid grid on sphere simulation
@@ -105,13 +90,14 @@ class SphereViewer:
         self.exit_fn = exit_fn
         self.tick_fn = tick_fn        
         self.window_size = window_size
-
+        self.touch_fn = touch_fn
         
         self.world_texture = pyglet.image.load(resource_file("data/azworld.png"))
         self.rotation_manager = RotationManager(auto_spin=auto_spin)
         self.skeleton = glskeleton.GLSkeleton(draw_fn = self.redraw, resize_fn = self.resize, 
         tick_fn=self.tick, mouse_fn=self.mouse, key_fn=self.key, window_size=window_size)
 
+        self.touch_manager = ZMQTouchHandler(zmq_address)
         
 
         if not self.simulate:
@@ -121,6 +107,10 @@ class SphereViewer:
             
         self.make_quad()
       
+    # return all touches currently down
+    def get_touches(self):
+        return self.touch_manager.active_touches
+
     def resize(self, w, h):
         if not self.simulate:
             cx = w - self.size
@@ -165,8 +155,9 @@ class SphereViewer:
     def tick(self):        
         if self.tick_fn:
             self.tick_fn()
-                
-        self.rotation_manager.tick()
+                    
+        self.rotation_manager.tick() # simulation rotation
+        self.touch_manager.tick(self.touch_fn) # touch handling
             
     def draw_touch_points(self):
         # draw the touch points
