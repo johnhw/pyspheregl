@@ -29,6 +29,13 @@ def mkshader(verts, frags):
 
 class SphereViewer:
 
+    def get_whole_sphere_shader_vbo(self, shader):
+        # return a shadervbo that will render across the entire
+        # sphere. Assumes an input attribute vec2 called position
+        return shader.ShaderVBO(shader, self.sphere_quad_ibuf,
+                        buffers={"position":self.sphere_quad_vbuf})
+
+
     def make_quad(self):
         # create the vertex buffers that will be used to reproject the sphere
         self.fbo = gloffscreen.FBOContext(self.size, self.size)
@@ -37,38 +44,44 @@ class SphereViewer:
         self.finger_point_shader = mkshader(["sphere.vert", "finger_point.vert"], ["finger_point.frag"])     
         self.sphere_map_shader = mkshader(["sphere.vert", "sphere_map.vert"], ["sphere_map.frag"])        
         self.touch_shader = mkshader(["sphere.vert", "sphere_touch.vert"], ["sphere_touch.frag"])        
-        self.quad_shader = mkshader(["sphere.vert", "quad.vert"], ["quad.frag"])        
-
-        n_subdiv = 128        
+        self.quad_shader = mkshader(["quad.vert"], ["quad.frag"])        
+        
+        n_subdiv = 64        
         quad_indices, quad_verts, _ = make_unit_quad_tile(n_subdiv)    
         qverts = np_vbo.VBuf(quad_verts)      
+        qixs = np_vbo.IBuf(quad_indices)
+        self.sphere_quad_ibuf = qixs
+        self.sphere_quad_vbuf = qverts
         
-        self.sphere_render = shader.ShaderVBO(self.sphere_map_shader, quad_indices, 
+        self.sphere_render = shader.ShaderVBO(self.sphere_map_shader, qixs, 
                                          buffers={"position":qverts},
                                          textures={"quadTexture":self.fbo.texture},
                                          vars={"grid_bright":self.debug_grid})
 
 
+        
 
         # this will hold positions of active touches for drawing
         self.touch_pts = np.zeros((32, 2))
         self.touch_pts[:,0] = -np.pi
         self.touch_buf = np_vbo.VBuf(self.touch_pts)
+        touch_ibuf = np_vbo.IBuf(np.arange(len(self.touch_pts)))
         self.touch_render = shader.ShaderVBO(self.finger_point_shader, 
-                                         np.arange(len(self.touch_pts)), 
+                                         touch_ibuf, 
                                          buffers={"position":self.touch_buf},
                                          primitives=GL_POINTS)
-
+        
         # simple quad render for testing
-        world_indices, world_verts, world_texs = make_unit_quad_tile(1)            
+        world_indices, world_verts, world_texs = make_unit_quad_tile(4)            
+        
 
-        self.world_render = shader.ShaderVBO(self.quad_shader, world_indices, 
+        self.world_render = shader.ShaderVBO(self.quad_shader, np_vbo.IBuf(world_indices), 
                                          buffers={"position":np_vbo.VBuf(world_verts),
                                          "tex_coord":np_vbo.VBuf(world_texs)},
-                                         textures={"quadTexture":self.world_texture.texture})
-
+                                         textures={"texture":self.world_texture.texture})
+        
         # for getting touches back
-        self.sphere_touch = shader.ShaderVBO(self.touch_shader, quad_indices, 
+        self.sphere_touch = shader.ShaderVBO(self.touch_shader, qixs, 
                                             buffers={"position":qverts})
 
         
@@ -77,7 +90,7 @@ class SphereViewer:
       
 
     def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, simulate=True, auto_spin=False, draw_fn=None, 
-        tick_fn=None, debug_grid=0.01, test_render=False, show_touches=True,
+        tick_fn=None, debug_grid=0.1, test_render=False, show_touches=True,
         zmq_address="tcp://localhost:4000", touch_fn=None):
         self.simulate = simulate
         self.show_touches = show_touches
@@ -104,7 +117,7 @@ class SphereViewer:
             cx = window_size[0] - sphere_resolution
             cy = window_size[1] - sphere_resolution            
             glViewport(cx/2,0,sphere_resolution,sphere_resolution)
-            
+        
         self.make_quad()
       
     # return all touches currently down
@@ -168,10 +181,11 @@ class SphereViewer:
         
                         
     def redraw(self):  
+        
         glEnable(GL_BLEND)        
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         # clear the screen
-        glClearColor(0.1, 0.1, 0.1, 1)
+        glClearColor(0.1, 0.0, 0.1, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         # enable point drawing for touch point
@@ -179,26 +193,25 @@ class SphereViewer:
         glEnable(GL_POINT_SPRITE)
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
                  
-        
         if not self.simulate:
             self.draw_fn()
             self.draw_touch_points()
         else:
             # draw onto the FBO texture
-            with self.fbo as f:
-                self.draw_fn()      
+            with self.fbo as f:                
+                self.draw_fn()                      
                 self.draw_touch_points()          
                 
 
             # render onto the screen using the sphere distortion shader    
             rotate, tilt = self.rotation_manager.get_rotation()
-            self.sphere_render.draw(n_prims=0, vars={"rotate":np.radians(rotate), "tilt":np.radians(tilt)})
+            self.sphere_render.draw(vars={"rotate":np.radians(rotate), "tilt":np.radians(tilt)})
             
             
             # render the image for the touch point look up
             with self.touch_fbo as f:
             
-                self.sphere_touch.draw(n_prims=0, vars={"rotate":np.radians(rotate), "tilt":np.radians(tilt)})
+                self.sphere_touch.draw(vars={"rotate":np.radians(rotate), "tilt":np.radians(tilt)})
                 
                 pixel_data = (GLubyte * 4)()
                 # get window coordinates
@@ -207,7 +220,7 @@ class SphereViewer:
                 # read the pixels, convert back to radians (from unsigned bytes)
                 glReadPixels(mx, my, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel_data)                                
                 
-                sphere_lat, sphere_lon = ((pixel_data[0] / 255.0) -0.5) * np.pi, ((pixel_data[1]/255.0)-0.5)*2*np.pi                
+                sphere_lat, sphere_lon = ((pixel_data[0] / 255.0) -0.5) * -np.pi, ((pixel_data[1]/255.0)-0.5)*2*np.pi                
                 # tell the touch manager where the touch is
                 self.rotation_manager.set_sphere_touch(sphere_lat, sphere_lon)
 

@@ -74,7 +74,7 @@ class TouchManager:
                 del self.active_touches[touch_obj["active_touch"]]
                 del self.graveyard[touch]
             
-        print(events)
+        
         return {"events":events, "t":t, "fseq":fseq}
 
 
@@ -110,6 +110,7 @@ class ZMQTouchHandler:
                 self.active_touches = self.manager.active_touches
                 
                 # call the callback
+
                 if touch_fn is not None and len(events["events"])>0:
                     touch_fn(events["events"])                    
                     

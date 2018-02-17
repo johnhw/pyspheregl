@@ -518,9 +518,9 @@ class Shader:
 
 
 class ShaderVBO:
-    def __init__(self, shader, ixs, buffers=None, textures=None, vars=None, primitives=GL_QUADS):
-        self.shader = shader
-        self.ibo = np_vbo.create_elt_buffer(ixs)
+    def __init__(self, shader, ibo, buffers=None, textures=None, vars=None, primitives=GL_QUADS):
+        self.shader = shader        
+        self.ibo = ibo
         
         self.buffers =  {}
         self.textures = {}

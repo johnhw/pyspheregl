@@ -46,9 +46,8 @@ class OSCMonitor:
         # print the touch positions
         for touch in touches:
             pos = touch_list.get(touch)
-            x, y = pos
-            lon, lat = sphere.tuio_to_polar(x,y)
-            cz, cx, cy = sphere.spherical_to_cartesian((lon, lat))
+            lon, lat  = pos
+            cz, cx, cy = sphere.spherical_to_cartesian((lon, -lat))
             # compute ASCII coordinates
             sphere_cy = sphere_y+sphere_rad
             if cz<0:
@@ -77,8 +76,14 @@ class OSCMonitor:
         screen.print_at("OSC: %10s:%5d" % (self.osc_ip, self.osc_port), 25, 0, colour=screen.COLOUR_YELLOW)        
         screen.print_at("ZMQ: %5d" % self.zmq_port, 66, 0, colour=screen.COLOUR_MAGENTA)
 
+        # calibration line
+        if self.calibration is not None:
+            screen.print_at(self.calibration_name, 0, 1, colour=screen.COLOUR_MAGENTA, bg=screen.COLOUR_BLACK)
+        else:
+            screen.print_at("UNCALIBRATED", 0, 1, colour=screen.COLOUR_RED, bg=screen.COLOUR_BLACK)
+
         # exceptions while receiving packets
-        screen.print_at(self.last_exception, 0, 1, colour=screen.COLOUR_WHITE, bg=screen.COLOUR_RED)
+        screen.print_at(">"+self.last_exception, 0, 21, colour=screen.COLOUR_WHITE, bg=screen.COLOUR_RED)
 
         # fseq and ntouches
         fseq_x = 44
@@ -127,16 +132,15 @@ class OSCMonitor:
     # the actual message handler
     # reads OSC messages, broadcasts ZMQ back
     def handler(self, addr, tags, data, client_addr):
-        self.last_packet = wall_clock()        
-        
+        self.last_packet = wall_clock()                
         # store a trace of recent packets
-        self.packet_trace.append(("%4.1f: "%self.last_packet) + "\t".join([str(d) for d in data]))
+        
         if len(self.packet_trace)>10:
                 self.packet_trace.pop(0)
 
         # we have data, decode it
         if len(data)>0:
-            
+            self.packet_trace.append(("%4.1f: "%(self.last_packet) + data[0]))
             # decode the OSC packet
             if data[0]=='fseq':
                 # frame complete
@@ -152,7 +156,7 @@ class OSCMonitor:
             
             # a single touch, accumulate into touch buffer
             if data[0]=='set':
-                touch_id, x, y = data[1:]
+                touch_id, x, y = data[1:4]
                 lon, lat = sphere.tuio_to_polar(x,y)
                 self.touch_list[touch_id] = lon, lat
                 
@@ -209,6 +213,12 @@ class OSCMonitor:
         self.timeout = timeout        
         self.full_trace = full_trace
         self.last_exception = ""
+
+        self.calibration = None
+        if self.calibration is not None:
+            self.calibration_name = calibration.calibration_name
+        else:
+            self.calibration_name = "UNCALIBRATED"
 
         # reset the timeouts
         self.last_packet = wall_clock() # last time a packet came in

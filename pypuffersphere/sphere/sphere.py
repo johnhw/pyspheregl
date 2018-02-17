@@ -328,7 +328,7 @@ def spherical_quad(pts, iter=2, uv=None, **kwargs):
 import numpy as np
 
 def spherical_to_cartesian(pt):
-    """Convert a lat, lon co-ordinate to an a Cartesian x,y,z point on the unit sphere."""
+    """Convert a lon, lat co-ordinate to an a Cartesian x,y,z point on the unit sphere."""
     lon, lat = pt 
     lat += np.pi/2
     st = np.sin(lat)
@@ -337,7 +337,17 @@ def spherical_to_cartesian(pt):
     z = np.cos(lat)
     
     return x,y,z
+
+def polar_to_cart(lon, lat):
+    lat += np.pi/2
+    st = np.sin(lat)
     
+    x = np.cos(lon) * st
+    y = np.sin(lon) * st
+    z = np.cos(lat)
+    
+    return x,y,z
+
     
 def cartesian_to_spherical(pt):
     """Convert a Cartesian 3D point to lon, lat co-ordinates of the projection

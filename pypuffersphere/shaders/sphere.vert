@@ -1,7 +1,6 @@
 
 #version 330 core
 #define version_set 330
-
 #define M_PI 3.1415926535897932384626433832795
 
 vec2 az_to_polar(vec2 az)
@@ -35,6 +34,7 @@ vec3 polar_to_azimuthal(vec2 polar)
 }
 
 
+
 vec3 spherical_to_cartesian(vec2 latlon)
 {
     // Convert a lat, lon co-ordinate to an a Cartesian x,y,z point on the unit sphere.
@@ -49,6 +49,12 @@ vec3 spherical_to_cartesian(vec2 latlon)
     cart.z = -cos(lat);    
     return cart;
 }   
+
+vec3 polar_to_cartesian(vec2 latlon)
+{
+    return spherical_to_cartesian(latlon);
+}
+
 
 // From https://gist.github.com/neilmendoza/4512992
 mat4 rotationMatrix(vec3 axis, float angle)

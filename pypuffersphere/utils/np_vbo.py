@@ -15,6 +15,9 @@ class VBuf:
         assert(self.shape==array.shape)
         self.buffer.set_data(array.astype(np.float32).ctypes.data)
 
+
+
+
 def create_vao(vbufs):
     """
         Takes a list of VBufs, and generates
@@ -57,17 +60,18 @@ def draw_vao(vao, ibo=None, primitives=GL_QUADS,  n_vtxs=0, n_prims=0):
 
 def create_vbo(arr, mode=GL_STATIC_DRAW):
     """Creates an np.float32/GL_FLOAT buffer from the numpy array arr on the GPU"""
-    bo = pyglet.graphics.vertexbuffer.create_buffer(arr.nbytes, GL_ARRAY_BUFFER, mode)
-    bo.bind()            
-    bo.set_data(arr.astype(np.float32).ctypes.data)
+    bo = pyglet.graphics.vertexbuffer.create_buffer(arr.nbytes, GL_ARRAY_BUFFER, mode, vbo=True)
     bo.shape = arr.shape # store shape for later
+    bo.bind()            
+    arr = arr.astype(np.float32)
+    bo.set_data(arr.ctypes.data)
     # unbind the buffer
     glBindBuffer(GL_ARRAY_BUFFER, 0)        
     return bo
 
 def create_elt_buffer(arr, mode=GL_STATIC_DRAW):
     """Creates an np.uint32/GL_UNSIGNED_INT buffer from the numpy array arr on the GPU"""    
-    bo = pyglet.graphics.vertexbuffer.create_buffer(arr.nbytes, GL_ELEMENT_ARRAY_BUFFER, mode)
+    bo = pyglet.graphics.vertexbuffer.create_buffer(arr.nbytes, GL_ELEMENT_ARRAY_BUFFER, mode, vbo=True)
     bo.bind()            
     
     bo.set_data(arr.astype(np.uint32).ctypes.data)  
@@ -75,6 +79,9 @@ def create_elt_buffer(arr, mode=GL_STATIC_DRAW):
     # unbind
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
     return bo
+
+def IBuf(arr):
+    return create_elt_buffer(arr)
 
 def attach_vbo(bo, n):
     """Attach a vertex buffer object to attribute pointer n"""
