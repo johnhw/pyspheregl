@@ -574,6 +574,9 @@ def process_calibration(calibration_name=None, fit=None):
     calibration = calibration[calibration["distance"]<np.radians(22)]
     print "%d targets excluded as being outliers with >25 degree offset\n%d calibration targets remain" % (total_targets-len(calibration), len(calibration))
 
+    if len(calibration)<5:
+        print("Less than 5 calibration targets; aborting...")
+        return
     grouped = calibration.groupby(["target_x", "target_y"])
     print "%d unique targets identified; %d repeats per target" % (len(grouped), int(0.5+total_targets/float(len(grouped))))
     print

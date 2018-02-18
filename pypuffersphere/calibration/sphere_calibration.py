@@ -79,44 +79,41 @@ class SphereCalibration:
         self.size = self.sim.size
         self.target_data = [] 
         self.create_geometry()
-        self.rep = 0
+        
+        self.ready_for_touch = True        
         ######
         self.sim.start()
 
-    def create_geometry(self):
-        # randomly jam in 4 "spacer" targets at the start
-        # because gl_VertexID does something really weird
-        #target_array = np.array(([[0,-np.pi]]*4)+self.targets, dtype=np.float32)     
+    def create_geometry(self):            
         target_array = np.array(self.targets, dtype=np.float32)     
         
         point_shader = shader_from_file([sphere_sim.getshader("sphere.vert"), sphere_sim.getshader("calibration_point.vert")],         
                                         [sphere_sim.getshader("calibration_point.frag")])  
+
         self.target_render = ShaderVBO(point_shader, IBuf(np.arange(len(target_array))), 
                                         buffers={"position":VBuf(target_array)},                                        
-                                        vars = {"target":self.target, "selected_color":[0.9, 0.9, 0.2]},
+                                        vars = {"target":self.target, "selected_color":[0.2, 0.9, 0.9]},
                                         primitives=GL_POINTS)                                        
                     
 
     def advance_target(self):
         self.target += 1
-        self.rep += 1
-        self.rep = self.rep % self.repetitions
-        # check if we are done
-        if self.target==self.n_targets:
+        # check if we are done        
+        if self.target==len(self.targets):
             self.write_output()
             self.sim.exit()        
-
-    def add_touch(self, t_id, lon, lat, x, y):
-        self.target_data.append((t_id, lon, lat, x, y))
+             
 
     def draw(self):
         glClearColor(0.1,0.1,0.1,1)
         glClear(GL_COLOR_BUFFER_BIT)
         glEnable(GL_POINT_SPRITE)
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)        
-        colors = [[0.2,0.9,0.9], [0.9, 0.2, 0.2], [0.2, 0.9, 0.2], [0.9, 0.9, 0.2], [0.2, 0.9, 0.9]]
         
-        self.target_render.draw(vars={"target":self.target, "t":wall_clock(), "selected_color":colors[self.rep]})
+        if self.ready_for_touch:
+            self.target_render.draw(vars={"target":self.target, "t":wall_clock()})
+        else:
+            self.target_render.draw(vars={"target":-1, "t":0})
 
     def register_touch(self, id):
         pts = self.touch_pts[id]
@@ -124,27 +121,29 @@ class SphereCalibration:
         if len(pts)>5:
             med_pt = np.median(self.touch_pts[id][2:-2], axis=0)                                     
             lon, lat = self.targets[self.target]
-            self.add_touch(self.target, lon, lat, med_pt[0], med_pt[1])
-            self.advance_target()
-
+            self.target_data.append((self.target, lon, lat, med_pt[0], med_pt[1]))
+            self.advance_target()            
+            self.ready_for_touch = False
+            
 
     def touch(self, events):
         for event in events:
             touch = event.touch            
-            # store raw events
-            if event.event=="DRAG" or event.event=="DOWN":                                                                
-                self.touch_pts[touch.id].append(touch.raw)
-            if event.event=="UP":
-                # touch went up; accept if at least 
-                # touch_time long
-                if touch.duration>self.touch_time:
-                    self.register_touch(touch.id)
+            # check if we are waiting for a touch
+            if self.ready_for_touch:
+                if event.event=="DRAG" or event.event=="DOWN":                                                                                
+                    # store raw events
+                    self.touch_pts[touch.id].append(touch.raw)
+                    if touch.duration>self.touch_time:                    
+                        self.register_touch(touch.id)
+
+            if event.event=="UP":                
+                self.ready_for_touch = True
+                
+                
 
     def tick(self):
-        if self.target == self.n_targets:
-            # complete; write the output and exit
-            self.write_output()
-            self.sim.exit()
+        pass
 
     def write_output(self):
         timename = time.asctime(time.localtime()).replace(" ","_").replace(":", "_")
@@ -154,10 +153,10 @@ class SphereCalibration:
             print("Calibration directory already exists")
 
         fname = "calibration_%s.csv" % timename
-        with open(fname) as f:
+        with open(os.path.join("calibration", fname), "w") as f:
             f.write("id, target_lon, target_lat, tuio_x, tuio_y\n")
             for id, lon, lat, x, y in self.target_data:
-                f.write("%d, %f, %f, %f, %f" % (id, lon, lat, x, y))
+                f.write("%d, %f, %f, %f, %f\n" % (id, lon, lat, x, y))
         if self.postprocess:
                 print("Beginning post-processing...")
                 import pypuffersphere.calibration.process_calibration as process_calibration
@@ -170,99 +169,6 @@ class SphereCalibration:
 
 
 
-if __name__ == "__main__":
-    
+if __name__ == "__main__":    
     s = SphereCalibration()
-    
-
-    print
-    # parse the command line arguments    
-    
-    
-    count = 0
-    
-   
-
-
-    
-    with open(os.path.join("calibration", fname), 'w') as f:
-        # CSV header
-        f.write("id, target_lon, target_lat, tuio_x, tuio_y\n")
-        
-        targets = []
-        nt = n_targets
-        
-        # adjust to the given number of targets given the latitude constraint
-        while len(targets)<n_targets:
-            targets = spiral_targets(nt)                                   
-            targets = [t for t in targets if t[1]>min_latitude]   
-            nt += n_targets-len(targets)
-        
-        print "%d unique targets; %d reps; %d touches total" % (len(targets), reps, len(targets)*reps)
-        print "Touch time is %.2f seconds" % touch_time
-        print "Not including targets below -%d degrees" % min_latitude_degrees
-        unique_targets = targets
-        if interleave:
-            targets = [t for t in targets for i in range(reps)]
-        else:
-            targets = targets * reps
-        touch_times = {}
-        touch_pts = defaultdict(list)
-        ignored_touches = set([-1])        
-                
-        def draw_fn():
-            global target            
-            init_gl()                     
-            active = False
-            
-            if not dummy:                
-                touches = touch_lib.get_touches()                           
-            else:   
-                # make fake touches to run through the targets
-                tf = int(time.clock()*1.0)
-                if tf<3:
-                    tf = -1
-                touches = {tf:(0.5, 0.5)}                
-                
-            touches = touches[0]
-            for touch in touches:
-                if touch not in ignored_touches:
-                    if touch_times.has_key(touch):
-                        active = True
-                        ts = touch_times[touch]  
-                        x, y = touches[touch]
-                        touch_pts[touch].append((x,y))
-                        if time.clock()-ts > touch_time:                                                                                   
-                            # compute median touch position of x and y, ignoring first two samples (probably spurious)
-                            med_x = np.median([pt[0] for pt in touch_pts[touch][2:]])
-                            med_y = np.median([pt[1] for pt in touch_pts[touch][2:]]) 
-                            #print "Stopped: ",touch, " at (%f, %f) %d touches" % (med_x, med_y, len(touch_pts[touch]))                            
-                            print "Target %d/%d completed; %d trace points" % (target+1, len(targets), len(touch_pts[touch]))
-                            f.write("%d, %f, %f, %f, %f\n" % (target, targets[target][0], targets[target][1], med_x, med_y))
-                            ignored_touches.add(touch)
-                            active = False
-                            target = target+1
-                    else:
-                        touch_times[touch] = time.clock()
-                        #print "Started: ",touch
-            
-            if target==0 and not active:
-                draw_all_targets(unique_targets)  
-
-            # print "Target:" , target , "Length:" , len(targets)                 
-                             
-            if target == len(targets):
-                glClearColor(0,0,0,0)
-                glClear(GL_COLOR_BUFFER_BIT)
-                print "Completed calibration"
-                f.close()
-                
-                if postprocess:
-                    print "Beginning post-processing..."
-                    import process_calibration
-                    process_calibration.process_calibration(fname)                   
-                sys.exit()
-            draw_targets(targets, target, active)
-        
-        s.start()
 
