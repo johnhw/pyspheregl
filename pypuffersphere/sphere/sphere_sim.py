@@ -105,15 +105,15 @@ class SphereViewer:
             self.draw_fn = draw_fn
         else:
             self.draw_fn = self.test_render # simple test function to check rendering
-        self.exit_fn = exit_fn
+        
         self.tick_fn = tick_fn        
         self.window_size = window_size
         self.touch_fn = touch_fn
-        
+        self.exit_fn = exit_fn
         self.world_texture = pyglet.image.load(resource_file("data/azworld.png"))
         self.rotation_manager = RotationManager(auto_spin=auto_spin)
         self.skeleton = glskeleton.GLSkeleton(draw_fn = self.redraw, resize_fn = self.resize, 
-        tick_fn=self.tick, mouse_fn=self.mouse, key_fn=self.key, window_size=window_size)
+                                              tick_fn=self.tick, mouse_fn=self.mouse, key_fn=self.key, exit_fn=self._exit, window_size=window_size)
 
         self.touch_manager = ZMQTouchHandler(zmq_address)
         
@@ -124,6 +124,14 @@ class SphereViewer:
             glViewport(cx/2,0,sphere_resolution,sphere_resolution)
         
         self.make_quad()
+
+    def _exit(self):
+        if self.exit_fn is not None:
+            self.exit_fn()
+        
+    # called to exit the simulator
+    def exit(self):
+        self.skeleton.exit()
       
     # return all touches currently down
     def get_touches(self):
@@ -163,11 +171,8 @@ class SphereViewer:
                 
                 
     def key(self, event, symbol, modifiers):
-        if symbol==pyglet.window.key.ESCAPE:            
-            if self.exit_fn:
-                self.exit_fn()
-            pyglet.app.exit()
-            sys.exit(0)
+        if symbol==pyglet.window.key.ESCAPE:       
+            self.exit()     
                         
     
     def tick(self):        
@@ -196,9 +201,9 @@ class SphereViewer:
         # but the line shader will draw lines connecting them
         i = 2
         for touch_id, touch in self.touch_manager.active_touches.items():            
-            self.touch_pts[i, 0:2] = touch["lonlat"]
-            self.touch_pts[i, 2] = min(1.0, touch["duration"]*40)  - min(1.0, touch["dead_time"]*2)
-            self.touch_pts[i+1, 0:2] = touch["origin"]
+            self.touch_pts[i, 0:2] = touch.lonlat
+            self.touch_pts[i, 2] = min(1.0, touch.duration*40)  - min(1.0, touch.dead_time*2)
+            self.touch_pts[i+1, 0:2] = touch.origin
             self.touch_pts[i+1, 2] = 0
             
             i += 2
@@ -222,12 +227,14 @@ class SphereViewer:
                  
         if not self.simulate:
             self.draw_fn()
-            self.draw_touch_points()
+            if self.show_touches:
+                self.draw_touch_points()
         else:
             # draw onto the FBO texture
             with self.fbo as f:                
-                self.draw_fn()                      
-                self.draw_touch_points()          
+                self.draw_fn()   
+                if self.show_touches:                   
+                    self.draw_touch_points()          
                 
 
             # render onto the screen using the sphere distortion shader    

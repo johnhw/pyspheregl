@@ -1,6 +1,6 @@
-// simplest possible touch shader
+// simple pass through for geometry shader
+// which will subdivide this line
 layout(location=0) in vec3 position;
-
 
 out float brightness;
 

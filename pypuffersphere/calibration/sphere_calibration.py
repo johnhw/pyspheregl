@@ -1,181 +1,186 @@
 import numpy as np
-from OpenGL.GL import *
-from OpenGL.GLU import *
-from OpenGL.GLUT import *
-from pygame.locals import *
-import pygame,time,sys,random,math
+import time,sys
+from pyglet.gl import *
+import pyglet
 from collections import defaultdict
-from pypuffersphere.utils import glutils, glskeleton, gloffscreen
 from pypuffersphere.sphere import sphere_sim, sphere
 import random
 import itertools
 import time
-#import sphere_cy
+import os
+from pypuffersphere.utils.np_vbo import IBuf, VBuf
+from pypuffersphere.utils.shader import shader_from_file, ShaderVBO
+import timeit
+# high precision timing
+wall_clock = timeit.default_timer
+
 import argparse
 
-# global state
-target = 0
-size = 0
 
-def spiral_layout(n, C=3.6):
-    """Return the spherical co-ordinates [phi, theta] for a uniform spiral layout
-    on the sphere, with n points. 
-    From Nishio et. al. "Spherical SOM With Arbitrary Number of Neurons and Measure of Suitability" 
-    WSOM 2005 pp. 323-330"""    
-    phis = []
-    thetas = []
-    for k in range(n):
-        h = (2*k)/float(n-1) - 1
-        phi = np.arccos(h)
-        if k==0 or k==n-1:
-            theta = 0
+
+
+class SphereCalibration:
+    def __init__(self):            
+        
+        parser = argparse.ArgumentParser(description='Run a calibration sequence on the sphere.')
+        #parser.add_argument('--interleave', '-i', help="Run the repeats immediately after each other, rather than multiple complete runs.",  action='store_true', dest="interleave")
+        parser.add_argument('--dummy', help="Ignore all input; just run through the targets and generate no output file.",  action='store_true', dest="dummy")
+        parser.add_argument('--noprocess', help="Disable post-processing of the calibration file; just record the data. You can run process_calibration.py afterwards to process the calibration data.",  action='store_true', dest="noprocess")
+        parser.add_argument('-n', "--ntargets", help="Total number of targets to run (default=100)", type=int, default=100)
+        parser.add_argument('-r', "--repetitions", help="Number of repetitions per target (default=3)", type=int, default=3)
+        parser.add_argument('-l', "--minlatitude", help="Minimum southern latitude to include, in degrees (default=40). 0=nothing below equator, 90=to pole", type=int, default=40)
+        parser.add_argument('-t', "--touchtime", help="Touch time per target, in seconds (default=0.4)", type=float, default=0.4)
+        parser.add_argument('--test', help="Run in sphere simulator mode", action='store_true')
+        args = parser.parse_args()
+        
+        self.postprocess = not args.noprocess
+        self.interleave = True # args.interleave
+        self.n_targets = args.ntargets
+        self.repetitions = args.repetitions
+        self.min_latitude_degrees = args.minlatitude
+        self.touch_time = args.touchtime
+        self.min_latitude = -np.radians(self.min_latitude_degrees)
+        self.dummy = args.dummy
+        reps = self.repetitions        
+
+        if self.dummy:        
+            print("WARNING: Running in dummy mode. Touch input will be ignored; NO VALID CALBIRATION WILL BE GENERATED!")
+            self.postprocess = False
+        self.target = 0
+
+        self.targets = []
+        nt = self.n_targets
+        
+        # adjust to the given number of targets given the latitude constraint
+        while len(self.targets)<self.n_targets:
+            self.targets = sphere.spiral_layout(nt)                                   
+            self.targets = [t for t in self.targets if t[1]>self.min_latitude]   
+            nt += self.n_targets-len(self.targets)
+
+        self.n_targets = len(self.targets)
+        
+        
+        print("%d unique targets; %d reps; %d touches total" % (len(self.targets), reps, len(self.targets)*reps))
+        print("Touch time is %.2f seconds" % self.touch_time)
+        print("Not including targets below -%d degrees" % self.min_latitude_degrees)
+
+        self.unique_targets = self.targets
+        if self.interleave:
+            self.targets = [t for t in self.targets for i in range(reps)]
         else:
-            theta = thetas[-1] + (C/np.sqrt(n*(1-h**2)))
-            
-        phis.append(phi-np.pi/2)
-        thetas.append(theta)        
-    return list(zip(thetas, phis))
+            self.targets = self.targets * reps
 
-    
-def start_touch():
-    touch_lib.init(ip="192.168.1.40", fseq=True)
-    touch_lib.add_handler()
-    touch_lib.start()
-    
-    
-def spiral_targets(n=140):
-    targets = spiral_layout(n)
-    return targets
+
+        self.touch_times = {}
+        self.touch_pts = defaultdict(list)
+        self.ignored_touches = set([-1])        
+
+        self.sim = sphere_sim.make_viewer(draw_fn=self.draw, tick_fn=self.tick, touch_fn=self.touch)     
+        self.size = self.sim.size
+        self.target_data = [] 
+        self.create_geometry()
+        self.rep = 0
+        ######
+        self.sim.start()
+
+    def create_geometry(self):
         
-def iso_targets(k=2):
-    vertices, edges = sphere_sim.gen_geosphere(k)       
-    targets = [sphere.cartesian_to_spherical(v) for v in vertices]
-    # exclude duplicate targets, and targets in bottom part of the sphere
-    targets = list(set(targets))         
-    targets = sorted(targets)
-    return targets
-
-def draw_polar(pts):
-    for x,y in pts:
-        x,y =  sphere.polar_to_display(x,y,size)
-        glVertex2f(x,y)
-
-def draw_all_targets(targets):
-    for target in targets:
-        lon, lat = target
-        glColor4f(0.2,0.2,0.2,0.2)
-        if lat>(np.pi/2-1e-4):
-            lat = np.pi/2-1e-4        
-        pts = sphere.spherical_circle((lon, lat), 0.01, n=12)                 
-        glBegin(GL_LINE_LOOP)
-        draw_polar(pts)
-        glEnd()
-            
-
+        target_array = np.array(([[0,0]]*4)+self.targets, dtype=np.float32)     
         
-def draw_targets(targets, target, active=False):
-    lon, lat = targets[target]
-    if active:
-        glColor4f(0.9, 0.3, 0.3, 0.8)
-    else:
-        glColor4f(0.8, 0.5, 0.0, 0.2)               
-    
-    if lat>(np.pi/2-1e-4):
-        lat = np.pi/2-1e-4
-    
-    pts = sphere.spherical_circle((lon, lat), 0.01, n=32)                 
-    glBegin(GL_LINE_LOOP)
-    draw_polar(pts)
-    glEnd()
+        point_shader = shader_from_file([sphere_sim.getshader("sphere.vert"), sphere_sim.getshader("calibration_point.vert")],         
+                                        [sphere_sim.getshader("calibration_point.frag")])  
+        self.target_render = ShaderVBO(point_shader, IBuf(np.arange(len(target_array))), 
+                                        buffers={"position":VBuf(target_array)},                                        
+                                        vars = {"target":self.target, "selected_color":[0.9, 0.9, 0.2]},
+                                        primitives=GL_POINTS)                                        
+                    
+
+    def advance_target(self):
+        self.target += 1
+        self.rep += 1
+        self.rep = self.rep % self.repetitions
+        # check if we are done
+        if self.target==self.n_targets:
+            self.write_output()
+            self.sim.exit()        
+
+    def add_touch(self, t_id, lon, lat, x, y):
+        self.target_data.append((t_id, lon, lat, x, y))
+
+    def draw(self):
+        glClearColor(0.1,0.1,0.1,1)
+        glClear(GL_COLOR_BUFFER_BIT)
+        glEnable(GL_POINT_SPRITE)
+        glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)        
+        self.target_render.draw(vars={"target":self.target+4, "t":wall_clock(), "rep":self.rep})
+
+    def register_touch(self, id):
+        pts = self.touch_pts[id]
+        # must have enough points to register
+        if len(pts)>5:
+            med_pt = np.median(self.touch_pts[id][2:-2], axis=0)                                     
+            lon, lat = self.targets[self.target]
+            self.add_touch(self.target, lon, lat, med_pt[0], med_pt[1])
+            self.advance_target()
 
 
-    for angle in [0,np.pi/2, np.pi,-np.pi/2]:
-        r1 = sphere.spherical_radial((lon,lat), 1, angle)
-        pts = sphere.spherical_line((lon,lat), r1)
-        glColor4f(0.0,0.0,0.0,0.3)
-        glBegin(GL_LINES)
-        draw_polar(pts)
-        glEnd()
+    def touch(self, events):
+        for event in events:
+            touch = event.touch            
+            # store raw events
+            if event.event=="DRAG" or event.event=="DOWN":                                                                
+                self.touch_pts[touch.id].append(touch.raw)
+            if event.event=="UP":
+                # touch went up; accept if at least 
+                # touch_time long
+                if touch.duration>self.touch_time:
+                    self.register_touch(touch.id)
+
+    def tick(self):
+        if self.target == self.n_targets:
+            # complete; write the output and exit
+            self.write_output()
+            self.sim.exit()
+
+    def write_output(self):
+        timename = time.asctime(time.localtime()).replace(" ","_").replace(":", "_")
+        try:
+            os.mkdir("calibration")
+        except OSError:
+            print("Calibration directory already exists")
+
+        fname = "calibration_%s.csv" % timename
+        with open(fname) as f:
+            f.write("id, target_lon, target_lat, tuio_x, tuio_y\n")
+            for id, lon, lat, x, y in self.target_data:
+                f.write("%d, %f, %f, %f, %f" % (id, lon, lat, x, y))
+        if self.postprocess:
+                print("Beginning post-processing...")
+                import pypuffersphere.calibration.process_calibration as process_calibration
+                process_calibration.process_calibration(fname)    
     
-    if active:
-        glColor4f(0.2, 0.5, 0.9, 0.8)
-        r = 0.0
-    else:
-        glColor4f(0.5, 0.5, 0.0, 0.1)               
-        # add pulsing while there is no touch event
-        r = np.sin(time.clock()*2)*0.02
-    
-    pts = sphere.spherical_circle((lon, lat), 0.2+r, n=32)                 
-    glBegin(GL_LINE_LOOP)
-    draw_polar(pts)
-    glEnd()
-    
-    
-    pts = sphere.spherical_circle((lon, lat), 0.8+r, n=32)                 
-    glBegin(GL_LINE_LOOP)
-    draw_polar(pts)
-    glEnd()
+
+ 
         
-def init_gl():
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-    glDisable(GL_LIGHTING)
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    glOrtho(0, size, 0, size, -1, 500)
-    glMatrixMode(GL_MODELVIEW)    
-    glLoadIdentity()
-    glEnable(GL_POINT_SMOOTH)
-    glPointSize(2.0)
-    glColor4f(1,0,1,1)
-    glDisable(GL_TEXTURE_2D)
-    glLineWidth(2.0)
-    glEnable(GL_LINE_SMOOTH)
-    glEnable(GL_BLEND)
-    glDisable(GL_DEPTH_TEST)
-    glClearColor(1,1,1,1)
-    glClear(GL_COLOR_BUFFER_BIT)
     
 
 
 
 if __name__ == "__main__":
-    s = sphere_sim.make_viewer()
-    size = s.size        # resolution of the display
+    
+    s = SphereCalibration()
+    
+
     print
     # parse the command line arguments    
-    parser = argparse.ArgumentParser(description='Run a calibration sequence on the sphere.')
-    parser.add_argument('--interleave', '-i', help="Run the repeats immediately after each other, rather than multiple complete runs.",  action='store_true', dest="interleave")
-    parser.add_argument('--dummy', help="Ignore all input; just run through the targets and generate no output file.",  action='store_true', dest="dummy")
-    parser.add_argument('--noprocess', help="Disable post-processing of the calibration file; just record the data. You can run process_calibration.py afterwards to process the calibration data.",  action='store_true', dest="noprocess")
-    parser.add_argument('-n', "--ntargets", help="Total number of targets to run (default=100)", type=int, default=100)
-    parser.add_argument('-r', "--repetitions", help="Number of repetitions per target (default=3)", type=int, default=3)
-    parser.add_argument('-l', "--minlatitude", help="Minimum southern latitude to include, in degrees (default=40). 0=nothing below equator, 90=to pole", type=int, default=40)
-    parser.add_argument('-t', "--touchtime", help="Touch time per target, in seconds (default=0.4)", type=float, default=0.4)
-    parser.add_argument('--test', help="Run in sphere simulator mode", action='store_true')
-    args = parser.parse_args()
     
-    postprocess = not args.noprocess
-    interleave = args.interleave
-    n_targets = args.ntargets
-    repetitions = args.repetitions
-    min_latitude_degrees = args.minlatitude
-    touch_time = args.touchtime
-    min_latitude = -np.radians(min_latitude_degrees)
-    dummy = args.dummy
-    reps = repetitions        
     
     count = 0
     
-    if not dummy:
-        import pypuffersphere.sphere.touch_sphere as touch_lib
-        # Start touch service
-        start_touch()
-    else:
-        print "WARNING: Running in dummy mode. Touch input will be ignored; NO VALID CALBIRATION WILL BE GENERATED!"
-        postprocess = False
+   
 
-    timename = time.asctime(time.localtime()).replace(" ","_").replace(":", "_")
-    fname = "calibration_%s.csv" % timename
+
+    
     with open(os.path.join("calibration", fname), 'w') as f:
         # CSV header
         f.write("id, target_lon, target_lat, tuio_x, tuio_y\n")
@@ -247,13 +252,12 @@ if __name__ == "__main__":
                 glClear(GL_COLOR_BUFFER_BIT)
                 print "Completed calibration"
                 f.close()
-                if not dummy:
-                    touch_lib.stop()
+                
                 if postprocess:
                     print "Beginning post-processing..."
                     import process_calibration
                     process_calibration.process_calibration(fname)                   
                 sys.exit()
             draw_targets(targets, target, active)
-        s.draw_fn = draw_fn
+        
         s.start()

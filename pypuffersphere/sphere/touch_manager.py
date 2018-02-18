@@ -2,6 +2,28 @@ import zmq
 import numpy as np
 import json
 
+import attr
+
+@attr.s
+class TouchEvent(object):
+    event = attr.ib(default="NONE")
+    touch = attr.ib(default=None)
+
+@attr.s
+class Touch(object):
+    lonlat = attr.ib()
+    origin = attr.ib()
+    orig_t = attr.ib()
+    raw = attr.ib() # raw TUIO coordinates
+    t = attr.ib()
+    fseq = attr.ib(default=0)
+    duration = attr.ib(default=0.0)
+    dead_time =attr.ib(default=0.0)
+    active_touch =attr.ib(default=0)
+    id = attr.ib(default=-1)
+    alive = attr.ib(default=False)    
+
+
 # convert raw frame positions into a stream of events
 # either up, drag or down. Remembers origin of drags, and
 # tracks duration. Also provides a stable numbering of active touches
@@ -15,17 +37,15 @@ class TouchManager:
         self.min_latitude = min_latitude
         self.touch_linger_time = linger_time
         
-    def touch_frame(self, frame_touches, fseq, t):
+    def touch_frame(self, frame_touches, raw, fseq, t):
 
         # filter out touches which are too low on the sphere
         frame_touches = {id:pos for id,pos in frame_touches.items() if pos[1]>self.min_latitude}
-
 
         # a new complete frame is issued
         existing, this_frame = set(self.touches.keys()), set(frame_touches.keys())        
         down, move, up = this_frame-existing, this_frame&existing, existing-this_frame
 
-        
         events = []
         for touch in down:
             # new touch down
@@ -35,46 +55,40 @@ class TouchManager:
             while active_touch in self.active_touches:
                 active_touch += 1
             
-            self.touches[touch] = {"origin":frame_touches[touch], 
-                                    "lonlat":frame_touches[touch], "orig_t":t, 
-                                    "t":t, "fseq":fseq, "duration":0.0,
-                                    "dead_time":0.0,
-                                    "active_touch":active_touch, "id":touch, "alive":True}
+            self.touches[touch] = Touch(origin=frame_touches[touch], lonlat=frame_touches[touch], orig_t=t,
+                                        t=t, fseq=fseq, duration=0.0, dead_time=0.0, active_touch=active_touch, id=touch, alive=True,
+                                        raw=raw[touch])            
             self.active_touches[active_touch] = self.touches[touch]
             
             # create the event
-            events.append({"event":"DOWN",                                 
-                            "touch":self.touches[touch]})
+            events.append(TouchEvent(event="DOWN", touch=self.touches[touch]))
                         
         for touch in move:
             # touch move
-            self.touches[touch]["lonlat"] = frame_touches[touch]
-            self.touches[touch]["t"] = t
-            self.touches[touch]["duration"] = t-self.touches[touch]["orig_t"] 
+            self.touches[touch].lonlat = frame_touches[touch]
+            self.touches[touch].t = t
+            self.touches[touch].raw = raw[touch]
+            self.touches[touch].duration = t-self.touches[touch].orig_t
             
-            events.append({"event":"DRAG", "touch":self.touches[touch]})
+            events.append(TouchEvent(event="DRAG", touch=self.touches[touch]))
             
         for touch in up:
             # touch up
-            events.append({"event":"UP", "touch":self.touches[touch]})
-            
-            self.touches[touch]["alive"]= False
-            
+            events.append(TouchEvent(event="UP", touch=self.touches[touch]))      
+            self.touches[touch].alive= False            
             self.graveyard[touch] = self.touches[touch]
-
             del self.touches[touch]
 
         # clean up touches that have been dead for too long
         for touch in list(self.graveyard.keys()):
             touch_obj = self.graveyard[touch]
-            dead_time = t - touch_obj["t"]
-            touch_obj["dead_time"] = dead_time
+            dead_time = t - touch_obj.t
+            touch_obj.dead_time = dead_time
             if dead_time>self.touch_linger_time:
                 # remove the slot it was using            
-                del self.active_touches[touch_obj["active_touch"]]
+                del self.active_touches[touch_obj.active_touch]
                 del self.graveyard[touch]
-            
-        
+                    
         return {"events":events, "t":t, "fseq":fseq}
 
 
@@ -104,6 +118,7 @@ class ZMQTouchHandler:
                 
                 # construct events
                 events = self.manager.touch_frame(touch_data["touches"], 
+                                                touch_data["raw"],
                                                 fseq=touch_data["fseq"],
                                                 t = touch_data["t"])
                 # take a copy of the touches

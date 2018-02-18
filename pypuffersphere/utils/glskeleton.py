@@ -75,7 +75,7 @@ class GLSkeleton:
     
         
     # init routine, sets up the engine, then enters the main loop
-    def __init__(self, draw_fn = None, tick_fn = None, event_fn = None, key_fn=None, resize_fn = None, mouse_fn = None, window_size=(800,600), fullscreen=False):    
+    def __init__(self, draw_fn = None, tick_fn = None, event_fn = None, key_fn=None, resize_fn = None, mouse_fn = None, exit_fn=None, window_size=(800,600), fullscreen=False):    
         #self.init_pygame(window_size[0], window_size[1], fullscreen)
         self.init_pyglet(window_size)
         self.fps = 60
@@ -84,12 +84,15 @@ class GLSkeleton:
         self.draw_fn = draw_fn
         self.tick_fn = tick_fn        
         self.key_fn = key_fn
+        self.exit_fn = exit_fn
         self.mouse_fn = mouse_fn        
         self.running = True
         
     # handles shutdown
-    def quit(self):
+    def exit(self):
         self.running = False
+        if self.exit_fn is not None:
+            self.exit_fn()
         pyglet.app.exit()
         
     # this is the redraw code. Add drawing code between the "LOCK" and "END LOCK" sections

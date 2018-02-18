@@ -50,8 +50,9 @@ def spiral_layout(n, C=3.6):
             theta = thetas[-1] + (C/np.sqrt(n*(1-h**2)))
             
         phis.append(phi-np.pi/2)
-        thetas.append(theta%(2*np.pi)-np.pi)        
-    return list(zip(thetas, phis))    
+        thetas.append(theta)        
+    return list(zip(thetas, phis))
+ 
     
 def tuio_to_polar(tuio_x, tuio_y):
     """tuio_to_polar takes an x/y coordinate given in TUIO format (values 0 to 1)

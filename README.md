@@ -1,6 +1,60 @@
 # pypuffersphere
 Python/Pyglet code for using rendering on the PufferSphere
 
+Dependencies:
+
+* attrs
+* pyglet
+* numpy
+* asciimatics
+* pyzmq
+* pyOSC
+
+
+# Module launching
+
+### **touch broadcast/monitor**
+`python -m pypuffersphere.sphere.touch_zmq monitor` 
+Will try to load `calibration.py` from the current directory as the calibration
+
+    Broadcast on the ZMQ PUB stream on the given TCP port.
+
+    Usage:       touch_zmq.py monitor [PORT] [ZMQ_PORT] [IP] [MSG] [TIMEOUT] [FULL_TRACE] [CONSOLE] [NO_CALIBRATION]
+                touch_zmq.py monitor [--port PORT] [--zmq-port ZMQ_PORT] [--ip IP] [--msg MSG] [--timeout TIMEOUT] [--full-trace FULL_TRACE] [--console CONSOLE] [--no-calibration NO_CALIBRATION]
+
+* `--full_trace` Show a full trace of activity, including an ASCII sphere view
+* `--no_calibration` Don't use touch calibration
+* `--console=False` Don't show the console view
+
+### Calibration
+`python -m pypuffersphere.calibration.sphere_calibration`
+
+        usage: sphere_calibration.py [-h] [--interleave] [--dummy] [--noprocess]
+                                    [-n NTARGETS] [-r REPETITIONS] [-l MINLATITUDE]
+                                    [-t TOUCHTIME] [--test]
+
+        Run a calibration sequence on the sphere.
+
+        optional arguments:
+        -h, --help            show this help message and exit
+        --interleave, -i      Run the repeats immediately after each other, rather
+                                than multiple complete runs.
+        --dummy               Ignore all input; just run through the targets and
+                                generate no output file.
+        --noprocess           Disable post-processing of the calibration file; just
+                                record the data. You can run process_calibration.py
+                                afterwards to process the calibration data.
+        -n NTARGETS, --ntargets NTARGETS
+                                Total number of targets to run (default=100)
+        -r REPETITIONS, --repetitions REPETITIONS
+                                Number of repetitions per target (default=3)
+        -l MINLATITUDE, --minlatitude MINLATITUDE
+                                Minimum southern latitude to include, in degrees
+                                (default=40). 0=nothing below equator, 90=to pole
+        -t TOUCHTIME, --touchtime TOUCHTIME
+                                Touch time per target, in seconds (default=0.4)
+        --test                Run in sphere simulator mode
+
 # Coordinate systems
 
 ## Reference points

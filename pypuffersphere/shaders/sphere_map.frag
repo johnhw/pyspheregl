@@ -22,9 +22,11 @@ vec3 grid(vec2 sphere, float spacing)
 {
     float ycoord = degrees(sphere.y) / grid_space;
     float xcoord = degrees(sphere.x) / grid_space;    
+    
     float yline = abs(fract(ycoord - 0.5) - 0.5) / fwidth(ycoord);    
     float xline = abs(fract(xcoord - 0.5) - 0.5) / fwidth(xcoord);    
     vec3 grid_line =  (vec3(1.0 - min(xline, 1.0)) + vec3(1.0 - min(yline, 1.0)));
+        
     return grid_line;
 
 }

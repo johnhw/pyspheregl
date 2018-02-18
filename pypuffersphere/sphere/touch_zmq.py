@@ -160,9 +160,11 @@ class OSCMonitor:
                 self.touch_list = {}                
                 # broadcast the raw touches themselves
                 self.zmq_socket.send_multipart(["TOUCH", json.dumps({"touches":self.last_touch_list, 
+                                                            "raw":self.raw_list,
                                                             "fseq":self.last_fseq, 
                                                             "stale":0,
                                                             "t":self.last_packet})])
+                self.raw_list = {}
                 
             
             # a single touch, accumulate into touch buffer
@@ -170,6 +172,7 @@ class OSCMonitor:
                 touch_id, x, y = data[1:4]
                 lon, lat = self.convert_touch(x,y)
                 self.touch_list[touch_id] = lon, lat
+                self.raw_list[touch_id] = x,y
                 
             # system is alive
             if data[0]=='alive':
@@ -188,7 +191,7 @@ class OSCMonitor:
             self.osc_server.handle_request()
             if screen:
                 self.update_display(screen)
-
+        
             # clear touch list if it gets stale
             if wall_clock()-self.last_packet>self.timeout*2:                
                 self.last_touch_list = {}            
@@ -196,7 +199,7 @@ class OSCMonitor:
                 
                 # broadcast a stale touch so subscribers know
                 # that touches aren't good any more
-                self.zmq_socket.send_multipart(["TOUCH", (json.dumps({"touches":{}, "fseq":-2, "stale":1, "t":wall_clock()}))])
+                self.zmq_socket.send_multipart(["TOUCH", (json.dumps({"touches":{}, "raw":{}, "fseq":-2, "stale":1, "t":wall_clock()}))])
 
                 
 
@@ -256,6 +259,7 @@ class OSCMonitor:
         self.last_fseq = -1
         self.touch_list = {}
         self.last_touch_list = {}
+        self.raw_list = {}
        
         
         self.packet_trace = [] # short history of packet message strings
