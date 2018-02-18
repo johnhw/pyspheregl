@@ -27,7 +27,7 @@ class RotationManager:
         # manage simulated touches on the sphere
         self.touch_is_down = False
         self.touch_pos = (0,0)
-        self._sphere_point = (-1, -1) # updated all the time in lon, lat format
+        self._sphere_point = None # updated all the time in lon, lat format        
         self.sphere_point = (-1, -1)  # updated only while the (right) mouse is down
 
     def send_osc(self, addr, elements):
@@ -78,24 +78,26 @@ class RotationManager:
 
     # get position of mouse in screen coords
     def get_mouse_pos(self):
-        return self.touch_pos
+        if self.touch_is_down:
+            return self.touch_pos
+        else:
+            return None
 
     # simulated touch point down
     def touch_down(self, x, y):
         self.touch_is_down = True
         self.touch_pos = (x,y)
-        self.sphere_point = self._sphere_point
-        print(self.sphere_point)
         
     # simulated touch point up
     def touch_release(self, x, y):
         self.touch_is_down = False
+        self._sphere_point = None
         self.touch_id += 1 # make sure we have unique ids for each simulated touch
 
     # simulated touch point moves
     def touch_drag(self, x, y):
         self.touch_pos = (x,y)
-        self.sphere_point = self._sphere_point
+        
         
 
     def tick(self):
@@ -114,9 +116,8 @@ class RotationManager:
             self.rotation[1] *= 0.95
 
         # send tuio if the touch is down        
-        if self.touch_is_down:
-            
-            self.send_touch(self.sphere_point)
+        if self.touch_is_down and self._sphere_point is not None:            
+            self.send_touch(self._sphere_point)
         else:            
             self.send_touch(None)
 
@@ -124,8 +125,15 @@ class RotationManager:
     def get_rotation(self):
         return self.rotation
 
+    def get_sphere_touch(self):
+        if self.touch_is_down:
+            return self._sphere_point
+        else:
+            return None
+
     def set_sphere_touch(self, lon, lat):
         # note: this should only be read while the mouse button is down
         # outside of a mouse down event, this will change as the sphere
         # is rotated, which won't be the desired effect!
         self._sphere_point = (lon, lat)
+        

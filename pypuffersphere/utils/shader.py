@@ -64,7 +64,7 @@ def if_in_use(f):
   
 import os
 
-def shader_from_file(verts, frags, path="shaders"):
+def shader_from_file(verts, frags, path="shaders", geoms=None):
     """Load vertex and fragment shaders from a list of files, and return the compiled shader"""
     v_shaders = []
     for vert in verts:
@@ -75,11 +75,17 @@ def shader_from_file(verts, frags, path="shaders"):
     for frag in frags:
         with open(os.path.join(path,frag)) as f:
                 f_shaders.append(f.read())
+                
+    g_shaders = []
+    if geoms is not None and len(geoms)>0:
+        for geom in geoms:
+            with open(os.path.join(path,geom)) as f:
+                    g_shaders.append(f.read())
 
     print("-"*80)         
-    print('\nCompiling shader: %s, %s' % (verts, frags))
+    print('\nCompiling shader: %s, %s, %s' % (verts, frags, geoms))
     
-    _shader = Shader(v_shaders, f_shaders)
+    _shader = Shader(vert=v_shaders, frag=f_shaders, geom=g_shaders)
     print("-"*80)
     return _shader
 
@@ -569,9 +575,12 @@ class ShaderVBO:
         """Change the named texture to the given texture ID"""
         self.textures[self.tex_names[name]] = texture
 
-    def draw(self, vars=None, n_prims=0, textures=None):
+    def draw(self, vars=None, n_prims=0, textures=None, primitives=None):
         vars = vars or {}
+        
+        primitives = primitives or self.primitives
         # either use the default textures
+
         if textures is None:
             textures = self.textures
         else:

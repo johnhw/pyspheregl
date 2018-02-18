@@ -50,7 +50,7 @@ class TouchManager:
             # touch move
             self.touches[touch]["lonlat"] = frame_touches[touch]
             self.touches[touch]["t"] = t
-            self.touches[touch]["duration"] = self.touches[touch]["orig_t"] - t
+            self.touches[touch]["duration"] = t-self.touches[touch]["orig_t"] 
             
             events.append({"event":"DRAG", "touch":self.touches[touch]})
             

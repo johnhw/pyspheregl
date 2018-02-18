@@ -24,8 +24,9 @@ def getshader(f):
     return resource_file(os.path.join("shaders", f))
 
 
-def mkshader(verts, frags):
-    return shader.shader_from_file([getshader(c) for c in verts], [getshader(c) for c in frags])
+def mkshader(verts, frags, geoms=None):
+    geoms = geoms or []
+    return shader.shader_from_file([getshader(c) for c in verts], [getshader(c) for c in frags], geoms=[getshader(c) for c in geoms])
 
 class SphereViewer:
 
@@ -41,7 +42,8 @@ class SphereViewer:
         self.fbo = gloffscreen.FBOContext(self.size, self.size)
         self.touch_fbo = gloffscreen.FBOContext(self.window_size[0], self.window_size[1], texture=False)
 
-        self.finger_point_shader = mkshader(["sphere.vert", "finger_point.vert"], ["finger_point.frag"])     
+        self.finger_point_shader = mkshader(["sphere.vert", "finger_point_nice.vert"], ["finger_point_nice.frag"])     
+        self.finger_line_shader = mkshader(["sphere.vert", "finger_line.vert"],  ["finger_line.frag"], geoms=["sphere.vert", "finger_line.gs"])     
         self.sphere_map_shader = mkshader(["sphere.vert", "sphere_map.vert"], ["sphere_map.frag"])        
         self.touch_shader = mkshader(["sphere.vert", "sphere_touch.vert"], ["sphere_touch.frag"])        
         self.quad_shader = mkshader(["quad.vert"], ["quad.frag"])        
@@ -62,15 +64,20 @@ class SphereViewer:
         
 
         # this will hold positions of active touches for drawing
-        self.touch_pts = np.zeros((32, 2))
-        self.touch_pts[:,0] = -np.pi
+        self.touch_pts = np.zeros((64, 3))        
         self.touch_buf = np_vbo.VBuf(self.touch_pts)
+
+        
+
         touch_ibuf = np_vbo.IBuf(np.arange(len(self.touch_pts)))
         self.touch_render = shader.ShaderVBO(self.finger_point_shader, 
                                          touch_ibuf, 
                                          buffers={"position":self.touch_buf},
                                          primitives=GL_POINTS)
-        
+        self.touch_line_render = shader.ShaderVBO(self.finger_line_shader, 
+                                         touch_ibuf, 
+                                         buffers={"position":self.touch_buf},
+                                         primitives=GL_LINES)
         # simple quad render for testing
         world_indices, world_verts, world_texs = make_unit_quad_tile(4)            
         
@@ -175,10 +182,31 @@ class SphereViewer:
     def draw_touch_points(self):
         # draw the touch points
         pt = self.rotation_manager.get_touch_point()
-        self.touch_pts[0,:] = pt
-        self.touch_buf.set(self.touch_pts)
-        self.touch_render.draw(n_prims=0)
         
+        # clear the buffer
+        self.touch_pts[:,0] = 0
+        self.touch_pts[:,1] = -np.pi
+        
+        # standard touches
+        for i, (touch_id, touch) in enumerate(self.touch_manager.active_touches.items()):            
+            self.touch_pts[i, 0:2] = touch["lonlat"]
+            self.touch_pts[i, 2] = min(1.0, touch["duration"]*40)  - min(1.0, touch["dead_time"]*2)
+
+        self.touch_buf.set(self.touch_pts)
+        self.touch_render.draw()
+
+      
+        # drag lines
+        i = 0
+        for touch_id, touch in self.touch_manager.active_touches.items():            
+            self.touch_pts[i, 0:2] = touch["lonlat"]
+            self.touch_pts[i, 2] = min(1.0, touch["duration"]*40)  - min(1.0, touch["dead_time"]*2)
+            self.touch_pts[i+1, 0:2] = touch["origin"]
+            self.touch_pts[i+1, 2] = min(1.0, touch["duration"]*40)  - min(1.0, touch["dead_time"]*2)
+            
+            i += 2
+        self.touch_buf.set(self.touch_pts)
+        self.touch_line_render.draw()      
                         
     def redraw(self):  
         
@@ -189,7 +217,8 @@ class SphereViewer:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         # enable point drawing for touch point
-        glEnable(GL_POINT_SMOOTH)
+        #glEnable(GL_POINT_SMOOTH)
+        glEnable(GL_LINE_SMOOTH)
         glEnable(GL_POINT_SPRITE)
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
                  
@@ -209,20 +238,19 @@ class SphereViewer:
             
             
             # render the image for the touch point look up
-            with self.touch_fbo as f:
-            
-                self.sphere_touch.draw(vars={"rotate":np.radians(rotate), "tilt":np.radians(tilt)})
-                
-                pixel_data = (GLubyte * 4)()
-                # get window coordinates
-                mx, my = self.rotation_manager.get_mouse_pos()                
-                
-                # read the pixels, convert back to radians (from unsigned bytes)
-                glReadPixels(mx, my, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel_data)                                
-                
-                sphere_lon, sphere_lat =  ((pixel_data[0]/255.0)-0.5)*2*np.pi, ((pixel_data[1] / 255.0) -0.5) * -np.pi,
-                # tell the touch manager where the touch is
-                self.rotation_manager.set_sphere_touch(sphere_lon, sphere_lat)
+            touch_pos = self.rotation_manager.get_mouse_pos()
+
+            if touch_pos:
+                with self.touch_fbo as f:                
+                    self.sphere_touch.draw(vars={"rotate":np.radians(rotate), "tilt":np.radians(tilt)})                    
+                    pixel_data = (GLubyte * 4)()
+                    # get window coordinates
+                    mx, my = touch_pos                    
+                    # read the pixels, convert back to radians (from unsigned bytes)
+                    glReadPixels(mx, my, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel_data)                                                
+                    sphere_lon, sphere_lat =  ((pixel_data[0]/255.0)-0.5)*2*np.pi, ((pixel_data[1] / 255.0) -0.5) * -np.pi,
+                    # tell the touch manager where the touch is
+                    self.rotation_manager.set_sphere_touch(sphere_lon, sphere_lat)
 
         
     

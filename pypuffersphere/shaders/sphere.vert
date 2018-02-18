@@ -12,11 +12,32 @@ vec2 az_to_polar(vec2 az)
     return lonlat;    
 }
 
+float sqr(float f)
+{
+    return f*f;
+}
+
+float spherical_distance(vec2 p1, vec2 p2)
+{
+    /* Given two points p1, p2 (in radians), return
+    the great circle distance between the two points. */
+    float lon1 = p1.x;
+    float lat1 = p1.y;
+    float lon2 = p2.x;
+    float lat2 = p2.y;
+
+    float dlat = lat2-lat1;
+    float dlon = lon2-lon1;
+    float a = sqr(sin(dlat/2)) + cos(lat1)*cos(lat2)*sqr(sin(dlon/2));
+    float c = 2*atan(sqrt(a), sqrt(1-a));
+    return c;
+}
+
 vec2 cartesian_to_polar(vec3 cartesian)
 {
     vec3 norm_pos = normalize(cartesian);
-    float lon = acos(norm_pos.z) - M_PI/2;
-    float lat = atan(norm_pos.y, norm_pos.x);
+    float lat = acos(norm_pos.z) - M_PI/2;
+    float lon = atan(norm_pos.y, norm_pos.x);
     return vec2(lon, lat);
 }
 
