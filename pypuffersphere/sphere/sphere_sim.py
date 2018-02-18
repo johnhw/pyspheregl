@@ -45,11 +45,10 @@ class SphereViewer:
         self.finger_point_shader = mkshader(["sphere.vert", "finger_point_nice.vert"], ["finger_point_nice.frag"])     
         self.finger_line_shader = mkshader(["sphere.vert", "finger_line.vert"],  ["finger_line.frag"], geoms=["sphere.vert", "finger_line.gs"])     
         self.sphere_map_shader = mkshader(["sphere.vert", "sphere_map.vert"], ["sphere_map.frag"])        
-        self.touch_shader = mkshader(["sphere.vert", "sphere_touch.vert"], ["sphere_touch.frag"])        
-        self.quad_shader = mkshader(["quad.vert"], ["quad.frag"])        
-        self.whole_shader = mkshader(["sphere.vert", "whole_sphere.vert"], ["whole_sphere_tex.frag"])        
+        self.touch_shader = mkshader(["sphere.vert", "sphere_touch.vert"], ["sphere_touch.frag"])                
+        self.whole_shader = mkshader(["sphere.vert", "whole_sphere.vert"], ["whole_sphere_rgb.frag"])        
         
-        n_subdiv = 64        
+        n_subdiv = 128        
         quad_indices, quad_verts, _ = make_unit_quad_tile(n_subdiv)    
         qverts = np_vbo.VBuf(quad_verts)      
         qixs = np_vbo.IBuf(quad_indices)
@@ -82,11 +81,6 @@ class SphereViewer:
         # simple quad render for testing
         world_indices, world_verts, world_texs = make_unit_quad_tile(64)            
         
-
-        self.world_render = shader.ShaderVBO(self.quad_shader, np_vbo.IBuf(world_indices), 
-                                         buffers={"position":np_vbo.VBuf(world_verts),
-                                         "tex_coord":np_vbo.VBuf(world_texs)},
-                                         textures={"texture":self.world_texture.texture})
 
         self.world_render = shader.ShaderVBO(self.whole_shader, np_vbo.IBuf(world_indices), 
                                          buffers={"quad_vtx":np_vbo.VBuf(world_verts),},
@@ -188,29 +182,29 @@ class SphereViewer:
         pt = self.rotation_manager.get_touch_point()
         
         # clear the buffer
-        self.touch_pts[:,0] = 0
+        self.touch_pts[:] = 0
         self.touch_pts[:,1] = -np.pi
+    
+        # force the simulated touch to be drawn
+        self.touch_pts[0:2,0:2] = pt        
+        self.touch_pts[0:2,2] = 1.0
         
-        # standard touches
-        for i, (touch_id, touch) in enumerate(self.touch_manager.active_touches.items()):            
-            self.touch_pts[i, 0:2] = touch["lonlat"]
-            self.touch_pts[i, 2] = min(1.0, touch["duration"]*40)  - min(1.0, touch["dead_time"]*2)
-
-        self.touch_buf.set(self.touch_pts)
-        self.touch_render.draw()
-
-      
-        # drag lines
-        i = 0
+        # we write in the touches in order:
+        # current position, brightness
+        # origin poisition, 0
+        # this means the point shader will draw only the active positions
+        # but the line shader will draw lines connecting them
+        i = 2
         for touch_id, touch in self.touch_manager.active_touches.items():            
             self.touch_pts[i, 0:2] = touch["lonlat"]
             self.touch_pts[i, 2] = min(1.0, touch["duration"]*40)  - min(1.0, touch["dead_time"]*2)
             self.touch_pts[i+1, 0:2] = touch["origin"]
-            self.touch_pts[i+1, 2] = min(1.0, touch["duration"]*40)  - min(1.0, touch["dead_time"]*2)
+            self.touch_pts[i+1, 2] = 0
             
             i += 2
         self.touch_buf.set(self.touch_pts)
         self.touch_line_render.draw()      
+        self.touch_render.draw()
                         
     def redraw(self):  
         

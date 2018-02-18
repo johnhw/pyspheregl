@@ -13,6 +13,7 @@ import logging
 logging.basicConfig(filename='touch_zmq.log', level=logging.DEBUG, 
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger=logging.getLogger(__name__)
+import os
 
 
 # Nice sphere :)
@@ -128,7 +129,17 @@ class OSCMonitor:
             
         screen.print_at("HEART:%5.1f" % delta_t, 0,2, colour=fg, bg=bg)
         screen.refresh()
-    
+
+    def convert_touch(self, x, y):
+        # convert the touch, using calibration is possible
+        if self.calibration is None:
+            # no calibration, just use tuio_to_polar
+            return sphere.tuio_to_polar(x,y)
+        else:
+            # must convert calibrated touch to plain float tuple
+            lon, lat = self.calibration.get_calibrated_touch(x,y)
+            return (float(lon), float(lat))
+
     # the actual message handler
     # reads OSC messages, broadcasts ZMQ back
     def handler(self, addr, tags, data, client_addr):
@@ -157,7 +168,7 @@ class OSCMonitor:
             # a single touch, accumulate into touch buffer
             if data[0]=='set':
                 touch_id, x, y = data[1:4]
-                lon, lat = sphere.tuio_to_polar(x,y)
+                lon, lat = self.convert_touch(x,y)
                 self.touch_list[touch_id] = lon, lat
                 
             # system is alive
@@ -185,10 +196,7 @@ class OSCMonitor:
                 
                 # broadcast a stale touch so subscribers know
                 # that touches aren't good any more
-                self.zmq_socket.send_multipart(["TOUCH", (json.dumps({"touches":{}, 
-                                                            "fseq":-2, 
-                                                            "stale":1,
-                                                            "t":wall_clock()}))])
+                self.zmq_socket.send_multipart(["TOUCH", (json.dumps({"touches":{}, "fseq":-2, "stale":1, "t":wall_clock()}))])
 
                 
 
@@ -201,7 +209,7 @@ class OSCMonitor:
             self.last_exception = str(err)
 
     
-    def monitor(self, port=3333, zmq_port=4000, ip="127.0.0.1", msg="/tuio/2Dcur", timeout=0.2, full_trace=False, console=True):
+    def monitor(self, port=3333, zmq_port=4000, ip="127.0.0.1", msg="/tuio/2Dcur", timeout=0.2, full_trace=False, console=True, no_calibration=False):
         """Listen to OSC messages on 3333. 
         Broadcast on the ZMQ PUB stream on the given TCP port."""        
         
@@ -214,9 +222,18 @@ class OSCMonitor:
         self.full_trace = full_trace
         self.last_exception = ""
 
+        # try to import calibration
+        # if not explicitly disabled with --no_calibration
         self.calibration = None
+        if not no_calibration:
+            try:
+                import calibration
+                self.calibration = calibration
+            except ImportError:
+                self.calibration = None
+            
         if self.calibration is not None:
-            self.calibration_name = calibration.calibration_name
+            self.calibration_name = calibration.calibration_file
         else:
             self.calibration_name = "UNCALIBRATED"
 
