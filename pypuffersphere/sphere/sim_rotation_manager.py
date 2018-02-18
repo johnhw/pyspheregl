@@ -27,7 +27,7 @@ class RotationManager:
         # manage simulated touches on the sphere
         self.touch_is_down = False
         self.touch_pos = (0,0)
-        self._sphere_point = (-1, -1) # updated all the time
+        self._sphere_point = (-1, -1) # updated all the time in lon, lat format
         self.sphere_point = (-1, -1)  # updated only while the (right) mouse is down
 
     def send_osc(self, addr, elements):
@@ -44,7 +44,7 @@ class RotationManager:
         
         self.send_osc("/tuio/2Dcur", ['alive'])
         if polar:
-            lat, lon = polar 
+            lon, lat = polar 
             tuio = sphere.polar_to_tuio(lon, lat)
             self.send_osc("/tuio/2Dcur", ['set', self.touch_id, tuio[0], tuio[1]])        
         self.send_osc("/tuio/2Dcur", ['fseq', self.frame_ctr])
@@ -124,8 +124,8 @@ class RotationManager:
     def get_rotation(self):
         return self.rotation
 
-    def set_sphere_touch(self, lat, lon):
+    def set_sphere_touch(self, lon, lat):
         # note: this should only be read while the mouse button is down
         # outside of a mouse down event, this will change as the sphere
         # is rotated, which won't be the desired effect!
-        self._sphere_point = (lat,lon)
+        self._sphere_point = (lon, lat)

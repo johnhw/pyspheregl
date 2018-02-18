@@ -220,9 +220,9 @@ class SphereViewer:
                 # read the pixels, convert back to radians (from unsigned bytes)
                 glReadPixels(mx, my, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel_data)                                
                 
-                sphere_lat, sphere_lon = ((pixel_data[0] / 255.0) -0.5) * -np.pi, ((pixel_data[1]/255.0)-0.5)*2*np.pi                
+                sphere_lon, sphere_lat =  ((pixel_data[0]/255.0)-0.5)*2*np.pi, ((pixel_data[1] / 255.0) -0.5) * -np.pi,
                 # tell the touch manager where the touch is
-                self.rotation_manager.set_sphere_touch(sphere_lat, sphere_lon)
+                self.rotation_manager.set_sphere_touch(sphere_lon, sphere_lat)
 
         
     

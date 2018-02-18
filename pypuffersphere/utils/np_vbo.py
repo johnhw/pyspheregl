@@ -58,15 +58,18 @@ def draw_vao(vao, ibo=None, primitives=GL_QUADS,  n_vtxs=0, n_prims=0):
     glBindVertexArray(0)
 
 
+_vbo_cache = []
 def create_vbo(arr, mode=GL_STATIC_DRAW):
     """Creates an np.float32/GL_FLOAT buffer from the numpy array arr on the GPU"""
     bo = pyglet.graphics.vertexbuffer.create_buffer(arr.nbytes, GL_ARRAY_BUFFER, mode, vbo=True)
     bo.shape = arr.shape # store shape for later
     bo.bind()            
     arr = arr.astype(np.float32)
+    _vbo_cache.append(arr)
     bo.set_data(arr.ctypes.data)
     # unbind the buffer
     glBindBuffer(GL_ARRAY_BUFFER, 0)        
+
     return bo
 
 def create_elt_buffer(arr, mode=GL_STATIC_DRAW):

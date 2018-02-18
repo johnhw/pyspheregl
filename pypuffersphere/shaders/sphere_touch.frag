@@ -12,7 +12,7 @@ in float alpha;
 void main(void)
 {              
     
-    color.rg = vec2(sphere.x / M_PI +0.5, sphere.y / (2*M_PI)+0.5);    
+    color.rg = vec2(sphere.x / (2*M_PI)+0.5, sphere.y / M_PI +0.5);    
     color.b = 0.0;
     color.a = alpha;          
 }

@@ -12,7 +12,7 @@ void main()
     sphere = polar;
 
     // apply longitude rotation 
-    polar.y -= rotate;
+    polar.x -= rotate;
     
     // compute the cartesian coordinate
     vec4 pos = vec4(spherical_to_cartesian(polar),1);

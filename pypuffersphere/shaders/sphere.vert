@@ -5,27 +5,28 @@
 
 vec2 az_to_polar(vec2 az)
 {
-    vec2 latlon;
-    latlon.x = -sqrt((az.x*az.x)+(az.y*az.y)) * M_PI + M_PI/2;
-    latlon.y = atan(az.y,az.x);
-    return latlon;    
+    vec2 lonlat;
+    lonlat.x = atan(az.y,az.x);
+    lonlat.y = -sqrt((az.x*az.x)+(az.y*az.y)) * M_PI + M_PI/2;
+    
+    return lonlat;    
 }
 
 vec2 cartesian_to_polar(vec3 cartesian)
 {
     vec3 norm_pos = normalize(cartesian);
-    float lat = acos(norm_pos.z) - M_PI/2;
-    float lon = atan(norm_pos.y, norm_pos.x);
-    return vec2(lat, lon);
+    float lon = acos(norm_pos.z) - M_PI/2;
+    float lat = atan(norm_pos.y, norm_pos.x);
+    return vec2(lon, lat);
 }
 
 
 
-vec3 polar_to_azimuthal(vec2 polar)
+vec3 polar_to_azimuthal(vec2 lonlat)
 {
     vec3 az;
-    float lat = polar.x;
-    float lon = polar.y;
+    float lon = lonlat.x;
+    float lat = lonlat.y;
     float r = (M_PI/2-lat)/M_PI;
     az.x = r * cos(lon);
     az.y = r * sin(lon);
@@ -35,13 +36,13 @@ vec3 polar_to_azimuthal(vec2 polar)
 
 
 
-vec3 spherical_to_cartesian(vec2 latlon)
+vec3 spherical_to_cartesian(vec2 lonlat)
 {
-    // Convert a lat, lon co-ordinate to an a Cartesian x,y,z point on the unit sphere.
+    // Convert a lon, lat co-ordinate to an a Cartesian x,y,z point on the unit sphere.
     vec3 cart;
     float lon, lat;
-    lat = latlon.x;
-    lon = latlon.y;
+    lon = lonlat.x;
+    lat = lonlat.y;
     lat += M_PI/2;
     float st = sin(lat);
     cart.x = cos(lon) * st;
@@ -50,9 +51,9 @@ vec3 spherical_to_cartesian(vec2 latlon)
     return cart;
 }   
 
-vec3 polar_to_cartesian(vec2 latlon)
+vec3 polar_to_cartesian(vec2 lonlat)
 {
-    return spherical_to_cartesian(latlon);
+    return spherical_to_cartesian(lonlat);
 }
 
 
