@@ -47,6 +47,7 @@ class SphereViewer:
         self.sphere_map_shader = mkshader(["sphere.vert", "sphere_map.vert"], ["sphere_map.frag"])        
         self.touch_shader = mkshader(["sphere.vert", "sphere_touch.vert"], ["sphere_touch.frag"])        
         self.quad_shader = mkshader(["quad.vert"], ["quad.frag"])        
+        self.whole_shader = mkshader(["sphere.vert", "whole_sphere.vert"], ["whole_sphere_tex.frag"])        
         
         n_subdiv = 64        
         quad_indices, quad_verts, _ = make_unit_quad_tile(n_subdiv)    
@@ -79,14 +80,17 @@ class SphereViewer:
                                          buffers={"position":self.touch_buf},
                                          primitives=GL_LINES)
         # simple quad render for testing
-        world_indices, world_verts, world_texs = make_unit_quad_tile(4)            
+        world_indices, world_verts, world_texs = make_unit_quad_tile(64)            
         
 
         self.world_render = shader.ShaderVBO(self.quad_shader, np_vbo.IBuf(world_indices), 
                                          buffers={"position":np_vbo.VBuf(world_verts),
                                          "tex_coord":np_vbo.VBuf(world_texs)},
                                          textures={"texture":self.world_texture.texture})
-        
+
+        self.world_render = shader.ShaderVBO(self.whole_shader, np_vbo.IBuf(world_indices), 
+                                         buffers={"quad_vtx":np_vbo.VBuf(world_verts),},
+                                         textures={"tex":self.world_texture.texture})
         # for getting touches back
         self.sphere_touch = shader.ShaderVBO(self.touch_shader, qixs, 
                                             buffers={"position":qverts})

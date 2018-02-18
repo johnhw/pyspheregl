@@ -13,7 +13,8 @@ class VBuf:
 
     def set(self, array):
         assert(self.shape==array.shape)
-        self.buffer.set_data(array.astype(np.float32).ctypes.data)
+        self.buffer.set_data(array)
+        #self.buffer.set_data(array.astype(np.float32).ctypes.data)
 
 
 
@@ -58,18 +59,47 @@ def draw_vao(vao, ibo=None, primitives=GL_QUADS,  n_vtxs=0, n_prims=0):
     glBindVertexArray(0)
 
 
-_vbo_cache = []
+# simple VBO wrapper since pyglet's built in object
+# seems to be buggy (?)
+class VBO:
+    def __init__(self, data, mode):
+        vbo = GLuint()
+        glGenBuffers(1, vbo)
+        self.target = GL_ARRAY_BUFFER
+        self.id = vbo 
+        self.bind()
+        self.mode = mode    
+        # upload the placeholder data
+        # must be the same shape on subsequent updates!
+        self.bind()
+        data = data.astype(np.float32)
+        glBufferData(self.target, data.nbytes, data.ctypes.data, self.mode)
+        self.nbytes = data.nbytes
+        
+        self.unbind()
+        self.vbo_id = vbo
+        self.shape = data.shape
+
+    def bind(self):
+        glBindBuffer(self.target, self.id)
+
+    def unbind(self):
+        glBindBuffer(self.target, 0)
+
+    def set_data(self, data):
+        data = data.astype(np.float32)
+        assert(data.nbytes == self.nbytes and data.shape==self.shape)
+        self.bind()
+        glBufferSubData(self.target, 0, data.nbytes, data.ctypes.data)
+        
+        
+
+
+
 def create_vbo(arr, mode=GL_STATIC_DRAW):
     """Creates an np.float32/GL_FLOAT buffer from the numpy array arr on the GPU"""
-    bo = pyglet.graphics.vertexbuffer.create_buffer(arr.nbytes, GL_ARRAY_BUFFER, mode, vbo=True)
-    bo.shape = arr.shape # store shape for later
-    bo.bind()            
-    arr = arr.astype(np.float32)
-    _vbo_cache.append(arr)
-    bo.set_data(arr.ctypes.data)
-    # unbind the buffer
-    glBindBuffer(GL_ARRAY_BUFFER, 0)        
-
+    #bo = pyglet.graphics.vertexbuffer.create_buffer(arr.nbytes, GL_ARRAY_BUFFER, mode, vbo=True)
+    bo = VBO(arr, mode)
     return bo
 
 def create_elt_buffer(arr, mode=GL_STATIC_DRAW):
