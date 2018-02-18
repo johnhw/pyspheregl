@@ -265,17 +265,9 @@ class Shader:
         
                           
         # set uniforms
-        # note that the type must be right here!
-        for k, v in vars.items():
-            if isinstance(v, int):
-                self.uniformi(k, v)
-            if isinstance(v, float):
-                self.uniformf(k, v)
-            if isinstance(v, np.ndarray):
-                if v.shape[0]==4:
-                    self.uniform_mat4(k, v)
-                if v.shape[0]==3:
-                    self.uniform_mat3(k, v)
+        # note that the type must be right here!        
+        for var, value in vars.items():
+            self.__setitem__(var, value)
         np_vbo.draw_vao(vao, ibo, primitives=primitives,  n_vtxs=ibo.shape[0], n_prims=n_prims)
                 
         self.unbind()
@@ -577,7 +569,7 @@ class ShaderVBO:
 
     def draw(self, vars=None, n_prims=0, textures=None, primitives=None):
         vars = vars or {}
-        
+
         primitives = primitives or self.primitives
         # either use the default textures
 

@@ -2,7 +2,8 @@
 out vec2 sphere;        // polar sphere coords
 out float alpha;        // alpha transparency
 layout(location=0) in vec2 position;
-uniform float rotate, tilt;
+uniform float rotate;
+uniform float tilt;
 
 
 void main()

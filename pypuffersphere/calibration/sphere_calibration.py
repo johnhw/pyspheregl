@@ -26,7 +26,7 @@ class SphereCalibration:
         #parser.add_argument('--interleave', '-i', help="Run the repeats immediately after each other, rather than multiple complete runs.",  action='store_true', dest="interleave")
         parser.add_argument('--dummy', help="Ignore all input; just run through the targets and generate no output file.",  action='store_true', dest="dummy")
         parser.add_argument('--noprocess', help="Disable post-processing of the calibration file; just record the data. You can run process_calibration.py afterwards to process the calibration data.",  action='store_true', dest="noprocess")
-        parser.add_argument('-n', "--ntargets", help="Total number of targets to run (default=100)", type=int, default=100)
+        parser.add_argument('-n', "--ntargets", help="Total number of targets to run (default=100)", type=int, default=300)
         parser.add_argument('-r', "--repetitions", help="Number of repetitions per target (default=3)", type=int, default=3)
         parser.add_argument('-l', "--minlatitude", help="Minimum southern latitude to include, in degrees (default=40). 0=nothing below equator, 90=to pole", type=int, default=40)
         parser.add_argument('-t', "--touchtime", help="Touch time per target, in seconds (default=0.4)", type=float, default=0.4)
@@ -84,8 +84,10 @@ class SphereCalibration:
         self.sim.start()
 
     def create_geometry(self):
-        
-        target_array = np.array(([[0,0]]*4)+self.targets, dtype=np.float32)     
+        # randomly jam in 4 "spacer" targets at the start
+        # because gl_VertexID does something really weird
+        #target_array = np.array(([[0,-np.pi]]*4)+self.targets, dtype=np.float32)     
+        target_array = np.array(self.targets, dtype=np.float32)     
         
         point_shader = shader_from_file([sphere_sim.getshader("sphere.vert"), sphere_sim.getshader("calibration_point.vert")],         
                                         [sphere_sim.getshader("calibration_point.frag")])  
@@ -112,7 +114,9 @@ class SphereCalibration:
         glClear(GL_COLOR_BUFFER_BIT)
         glEnable(GL_POINT_SPRITE)
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)        
-        self.target_render.draw(vars={"target":self.target+4, "t":wall_clock(), "rep":self.rep})
+        colors = [[0.2,0.9,0.9], [0.9, 0.2, 0.2], [0.2, 0.9, 0.2], [0.9, 0.9, 0.2], [0.2, 0.9, 0.9]]
+        
+        self.target_render.draw(vars={"target":self.target, "t":wall_clock(), "selected_color":colors[self.rep]})
 
     def register_touch(self, id):
         pts = self.touch_pts[id]
@@ -261,3 +265,4 @@ if __name__ == "__main__":
             draw_targets(targets, target, active)
         
         s.start()
+

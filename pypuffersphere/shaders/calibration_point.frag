@@ -13,6 +13,7 @@ void main()
 
     float bright = exp(-(ring_radius*ring_radius)*500) + exp(-(radius*radius)*200);
     bright += exp(-pt.x*pt.x*20000.0) + exp(-pt.y*pt.y*20000.0);
-    fcolor = vec4(color.r,color.g,color.b, color.a * bright);
+    float glow = bright * 0.5;
+    fcolor = vec4(color.r+glow,color.g+glow,color.b+glow, color.a * bright);
     
 }

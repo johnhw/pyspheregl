@@ -239,7 +239,8 @@ class SphereViewer:
 
             # render onto the screen using the sphere distortion shader    
             rotate, tilt = self.rotation_manager.get_rotation()
-            self.sphere_render.draw(vars={"rotate":np.radians(rotate), "tilt":np.radians(tilt)})
+            self.sphere_render.draw(vars={"rotate":np.radians(rotate),
+                     "tilt":np.radians(tilt)})
             
             
             # render the image for the touch point look up

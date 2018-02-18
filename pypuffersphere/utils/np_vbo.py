@@ -59,6 +59,7 @@ def draw_vao(vao, ibo=None, primitives=GL_QUADS,  n_vtxs=0, n_prims=0):
     glBindVertexArray(0)
 
 
+
 # simple VBO wrapper since pyglet's built in object
 # seems to be buggy (?)
 class VBO:
@@ -71,14 +72,14 @@ class VBO:
         self.mode = mode    
         # upload the placeholder data
         # must be the same shape on subsequent updates!
-        self.bind()
-        data = data.astype(np.float32)
-        glBufferData(self.target, data.nbytes, data.ctypes.data, self.mode)
-        self.nbytes = data.nbytes
         
-        self.unbind()
+        data = data.astype(np.float32)
+        glBufferData(self.target, data.nbytes, data.ctypes.data, self.mode)        
+        
+        self.nbytes = data.nbytes                
         self.vbo_id = vbo
-        self.shape = data.shape
+        self.shape = data.shape        
+        self.unbind()
 
     def bind(self):
         glBindBuffer(self.target, self.id)
@@ -104,10 +105,11 @@ def create_vbo(arr, mode=GL_STATIC_DRAW):
 
 def create_elt_buffer(arr, mode=GL_STATIC_DRAW):
     """Creates an np.uint32/GL_UNSIGNED_INT buffer from the numpy array arr on the GPU"""    
+    arr = arr.astype(np.uint32)
     bo = pyglet.graphics.vertexbuffer.create_buffer(arr.nbytes, GL_ELEMENT_ARRAY_BUFFER, mode, vbo=True)
     bo.bind()            
     
-    bo.set_data(arr.astype(np.uint32).ctypes.data)  
+    bo.set_data(arr.ctypes.data)  
     bo.shape = arr.shape # store shape for later  
     # unbind
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)

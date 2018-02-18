@@ -6,7 +6,8 @@ out float alpha;        // Mask to remove out of circle texture
 out float illumination; // brightness of point
 out vec2 sphere;        // polar sphere coords
 layout(location=0) in vec2 position;
-uniform float rotate, tilt;
+uniform float rotate;
+uniform float tilt;
 
 void main()
 {
