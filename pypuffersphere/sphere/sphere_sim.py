@@ -42,11 +42,16 @@ class SphereViewer:
         self.fbo = gloffscreen.FBOContext(self.size, self.size)
         self.touch_fbo = gloffscreen.FBOContext(self.window_size[0], self.window_size[1], texture=False)
 
-        self.finger_point_shader = mkshader(["sphere.vert", "finger_point_nice.vert"], ["finger_point_nice.frag"])     
-        self.finger_line_shader = mkshader(["sphere.vert", "finger_line.vert"],  ["finger_line.frag"], geoms=["sphere.vert", "finger_line.gs"])     
-        self.sphere_map_shader = mkshader(["sphere.vert", "sphere_map.vert"], ["sphere_map.frag"])        
-        self.touch_shader = mkshader(["sphere.vert", "sphere_touch.vert"], ["sphere_touch.frag"])                
-        self.whole_shader = mkshader(["sphere.vert", "whole_sphere.vert"], ["whole_sphere_rgb.frag"])        
+        self.finger_point_shader = mkshader(["sphere.vert", "sphere_sim/finger_point_nice.vert"], 
+        ["sphere_sim/finger_point_nice.frag"])     
+        self.finger_line_shader = mkshader(["sphere.vert", "sphere_sim/finger_line.vert"],  
+        ["sphere_sim/finger_line.frag"], geoms=["sphere.vert", "sphere_sim/finger_line.gs"])     
+        self.sphere_map_shader = mkshader(["sphere.vert", "sphere_sim/sphere_map.vert"],
+         ["sphere_sim/sphere_map.frag"])        
+        self.touch_shader = mkshader(["sphere.vert", "sphere_sim/sphere_touch.vert"], 
+        ["sphere_sim/sphere_touch.frag"])                
+        self.whole_shader = mkshader(["sphere.vert", "user/whole_sphere.vert"], 
+                                    ["user/whole_sphere_rgb.frag"])        
         
         n_subdiv = 128        
         quad_indices, quad_verts, _ = make_unit_quad_tile(n_subdiv)    

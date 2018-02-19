@@ -250,6 +250,9 @@ class OSCMonitor:
                 self.calibration = Calibration(calibration)
             except CalibrationException:
                 self.calibration = None
+        else:
+            self.calibration = None
+        
         
         # reset the timeouts
         self.last_packet = wall_clock() # last time a packet came in

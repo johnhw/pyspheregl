@@ -8,14 +8,13 @@ import time
 import os
 from pypuffersphere.utils.np_vbo import IBuf, VBuf
 from pypuffersphere.sphere import sphere_sim, sphere
+from pypuffersphere.sphere.sphere_sim import getshader
 from pypuffersphere.utils.shader import shader_from_file, ShaderVBO
 import timeit
 # high precision timing
 wall_clock = timeit.default_timer
 
 import argparse
-
-
 
 class SphereCalibration:
     def __init__(self):            
@@ -85,8 +84,8 @@ class SphereCalibration:
     def create_geometry(self):            
         target_array = np.array(self.targets, dtype=np.float32)     
         
-        point_shader = shader_from_file([sphere_sim.getshader("sphere.vert"), sphere_sim.getshader("calibration_point.vert")],         
-                                        [sphere_sim.getshader("calibration_point.frag")])  
+        point_shader = shader_from_file([getshader("sphere.vert"), getshader("calibration/calibration_point.vert")],         
+                                        [getshader("calibration/calibration_point.frag")])  
 
         self.target_render = ShaderVBO(point_shader, IBuf(np.arange(len(target_array))), 
                                         buffers={"position":VBuf(target_array)},                                        
@@ -155,16 +154,9 @@ class SphereCalibration:
             f.write("id, target_lon, target_lat, tuio_x, tuio_y\n")
             for id, lon, lat, x, y in self.target_data:
                 f.write("%d, %f, %f, %f, %f\n" % (id, lon, lat, x, y))
-        if self.postprocess:
-                print("Beginning post-processing...")
-                import pypuffersphere.calibration.process_calibration as process_calibration
-                process_calibration.process_calibration(fname)    
-    
 
- 
-        
-    
-
+        print("All OK")
+        print("Wrote calibration output to %s" % fname)
 
 
 if __name__ == "__main__":    
