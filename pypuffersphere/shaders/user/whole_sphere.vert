@@ -18,7 +18,7 @@ void main()
     
     // copy texture coordinates
     texCoord.xy = (quad_vtx+1)/2;
-    texCoord.y = 1 - texCoord.y;
+    texCoord.y =  texCoord.y;
 
     flat_position = quad_vtx.xy;
     az_position = vec2(atan(flat_position.y, flat_position.x), length(flat_position));

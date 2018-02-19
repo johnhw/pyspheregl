@@ -46,7 +46,7 @@ class RotationManager:
         if polar:
             lon, lat = polar 
             tuio = sphere.polar_to_tuio(lon, lat)
-            self.send_osc("/tuio/2Dcur", ['set', self.touch_id, tuio[0], tuio[1]])        
+            self.send_osc("/tuio/2Dcur", ['set', self.touch_id, tuio[0], 1.0-tuio[1]])        
         self.send_osc("/tuio/2Dcur", ['fseq', self.frame_ctr])
         self.frame_ctr += 1
 

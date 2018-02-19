@@ -76,12 +76,12 @@ Will try to load `calibration.py` from the current directory as the calibration
     * +ve longitude goes West (left if facing longitude 0)
     * -ve longitude goes East (right if facing longitude 0)
 
-* `[x, pi]` = `npole`
-* `[x, -pi]` = `spole`
+* `[x, pi/2]` = `npole`
+* `[x, -pi/2]` = `spole`
 * `[0,0]` = `gmq`
-* `[pi, 0]` = `wmq`
-* `[-pi, 0]` = `emq`
-* `[2*pi,0]` = `rmq`
+* `[pi/2, 0]` = `wmq`
+* `[-pi/2, 0]` = `emq`
+* `[pi,0]` = `rmq`
 
 ## Cartesian `cart`
 * Unit length vector XYZ representing point on sphere
@@ -107,12 +107,7 @@ Will try to load `calibration.py` from the current directory as the calibration
 * radius = (pi/2 - latitude) / pi, in range [0,1]
 * theta = longitude
 * discontinuity at base of sphere
-* `[0,0]` = `npole`
-* `[1,0]` = `spole`
-* `[0.5,0]` = `gmq`
-* `[0,0.5]` = `wmq`
-* `[0,-0.5]` = `emq`
-* `[-0.5,0]` = `rmq`
+
 
 ## Device native azimuthal `az`
 * x,y in [-1, 1] 
@@ -120,6 +115,12 @@ Will try to load `calibration.py` from the current directory as the calibration
 * circle at radius = 1 = bottom of sphere
 * `x = cos(radius) * theta `
 * `y = sin(radius) * theta`
+* `[0,0]` = `npole`
+* `[1,0]` = `spole`
+* `[0.5,0]` = `gmq`
+* `[0,0.5]` = `wmq`
+* `[0,-0.5]` = `emq`
+* `[-0.5,0]` = `rmq`
 
 ## Corrected device native pixel format `pixel`
 * Device native azimuthal scaled by resolution, but tweaked for partial sphere coverage

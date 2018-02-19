@@ -14,7 +14,7 @@ setup(
     packages = find_packages(),
     
     install_requires = ['numpy', 'pyopengl', 'pyglet', 'Cython', 'pyosc', 
-                        'attrs', 'scikt-learn', 'asciimatics', 'pyzmq'],
+                        'attrs', 'scikit-learn', 'asciimatics', 'pyzmq'],
 
     # files 
     ext_modules = cythonize([sphere_ext]),

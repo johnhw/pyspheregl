@@ -29,7 +29,7 @@ class Touch(object):
 # tracks duration. Also provides a stable numbering of active touches
 
 class TouchManager:
-    def __init__(self, min_latitude=-np.pi, linger_time=5.0):
+    def __init__(self, min_latitude=-np.pi, linger_time=0.0):
         self.touches = {}        
         # stable, but low numbered slots
         self.active_touches = {}     
@@ -88,7 +88,7 @@ class TouchManager:
                 # remove the slot it was using            
                 del self.active_touches[touch_obj.active_touch]
                 del self.graveyard[touch]
-                    
+        print(events)
         return {"events":events, "t":t, "fseq":fseq}
 
 
@@ -96,6 +96,7 @@ class TouchManager:
 # up/down/drag events 
 class ZMQTouchHandler:
     def __init__(self, zmq_address):
+        self.active_touches = {}
         # create a zmq receiver and subscribe to touches
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
@@ -103,7 +104,7 @@ class ZMQTouchHandler:
         socket.connect(zmq_address)
         self.socket = socket
         self.manager = TouchManager()
-        self.active_touches = {}
+        
         
     def tick(self, touch_fn=None):
         # receive any waiting touch events, and dispatch 
@@ -111,7 +112,6 @@ class ZMQTouchHandler:
         waiting = self.socket.poll(zmq.NOBLOCK)
         while waiting != 0:
             parts = self.socket.recv_multipart(zmq.NOBLOCK)       
-            
             if len(parts)==2:
                 json_data = parts[-1]
                 touch_data = json.loads(json_data)                

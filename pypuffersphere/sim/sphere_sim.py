@@ -69,7 +69,7 @@ class SphereViewer:
         
 
         # this will hold positions of active touches for drawing
-        self.touch_pts = np.zeros((64, 3))        
+        self.touch_pts = np.zeros((256, 3))        
         self.touch_buf = np_vbo.VBuf(self.touch_pts)
 
         
@@ -126,6 +126,7 @@ class SphereViewer:
         if not self.simulate:
             cx = window_size[0] - sphere_resolution
             cy = window_size[1] - sphere_resolution            
+            #glViewport(cx/2,0,sphere_resolution,sphere_resolution)
             glViewport(cx/2,0,sphere_resolution,sphere_resolution)
         
         self.make_quad()
@@ -154,7 +155,6 @@ class SphereViewer:
         self.skeleton.main_loop()
         
     def mouse(self, event, x=None, y=None, dx=None, dy=None, buttons=None, modifiers=None, **kwargs):
-        
         if buttons is not None:
             # drag sphere with left mouse
             if buttons & pyglet.window.mouse.LEFT:
@@ -183,8 +183,7 @@ class SphereViewer:
     def tick(self):        
         if self.tick_fn:
             self.tick_fn()
-                    
-        self.rotation_manager.tick() # simulation rotation
+        #self.rotation_manager.tick() # simulation rotation
         self.touch_manager.tick(self.touch_fn) # touch handling
             
     def draw_touch_points(self):
@@ -205,13 +204,17 @@ class SphereViewer:
         # this means the point shader will draw only the active positions
         # but the line shader will draw lines connecting them
         i = 2
-        for touch_id, touch in self.touch_manager.active_touches.items():            
+        for touch_id, touch in self.touch_manager.active_touches.items():
+            if i>=len(self.touch_pts): # make sure we don't overrun the touch buffer
+                break            
             self.touch_pts[i, 0:2] = touch.lonlat
             self.touch_pts[i, 2] = min(1.0, touch.duration*40)  - min(1.0, touch.dead_time*2)
             self.touch_pts[i+1, 0:2] = touch.origin
             self.touch_pts[i+1, 2] = 0
             
             i += 2
+
+        print(i)
         self.touch_buf.set(self.touch_pts)
         self.touch_line_render.draw()      
         self.touch_render.draw()
