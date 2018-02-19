@@ -7,7 +7,7 @@ vec2 az_to_polar(vec2 az)
 {
     vec2 lonlat;
     lonlat.x = atan(az.y,az.x);
-    lonlat.y = -sqrt((az.x*az.x)+(az.y*az.y)) * M_PI + M_PI/2;
+    lonlat.y = -(sqrt((az.x*az.x)+(az.y*az.y)) * M_PI - M_PI/2);
     
     return lonlat;    
 }

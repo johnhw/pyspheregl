@@ -57,7 +57,7 @@ class SphereCalibration:
 
         self.n_targets = len(self.targets)
         
-        
+        print(self.targets)
         print("%d unique targets; %d reps; %d touches total" % (len(self.targets), reps, len(self.targets)*reps))
         print("Touch time is %.2f seconds" % self.touch_time)
         print("Not including targets below -%d degrees" % self.min_latitude_degrees)

@@ -4,11 +4,11 @@ import OSC
 from asciimatics.screen import Screen
 import fire
 import timeit
-import sphere
+import pypuffersphere.sphere.sphere as sphere
 import numpy as np
 wall_clock = timeit.default_timer
 
-from pypuffersphere.sphere.touch_calibration import Calibration, CalibrationException
+from pypuffersphere.touch.touch_calibration import Calibration, CalibrationException
 
 # logger for debug messages, when handling socket comms
 import logging
@@ -17,6 +17,7 @@ logging.basicConfig(filename='touch_zmq.log', level=logging.DEBUG,
 logger=logging.getLogger(__name__)
 import os
 
+# add visual touch filtering for below min latitude inputs
 
 # Nice sphere :)
 ascii_sphere = """    
@@ -50,7 +51,9 @@ class OSCMonitor:
         for touch in touches:
             pos = touch_list.get(touch)
             lon, lat  = pos
-            cz, cx, cy = sphere.spherical_to_cartesian((lon, -lat))
+            cz, cx, cy = sphere.spherical_to_cartesian((lon, lat))
+
+                
             # compute ASCII coordinates
             sphere_cy = sphere_y+sphere_rad
             if cz<0:
@@ -59,8 +62,11 @@ class OSCMonitor:
                 sphere_cx = sphere_2x+sphere_rad
             px = sphere_cx - cx * sphere_rad
             py = sphere_cy + cy * sphere_rad * 0.6
-            
-            screen.print_at("X", int(px), int(py),  colour=screen.COLOUR_WHITE, bg=screen.COLOUR_CYAN)
+            # show touches that are too low
+            if lat < self.min_latitude:
+                screen.print_at(".", int(px), int(py),  colour=screen.COLOUR_WHITE, bg=screen.COLOUR_RED)
+            else:
+                screen.print_at("X", int(px), int(py),  colour=screen.COLOUR_WHITE, bg=screen.COLOUR_CYAN)
 
 
 
@@ -88,7 +94,7 @@ class OSCMonitor:
             screen.print_at(self.calibration.fname, 0, line, colour=screen.COLOUR_MAGENTA, bg=screen.COLOUR_BLACK)        
             screen.print_at("%d/%d targets, %d unique" % (self.calibration.used_targets, self.calibration.total_targets, self.calibration.unique), 5,  line+1, colour=screen.COLOUR_CYAN, bg=screen.COLOUR_BLACK)
             screen.print_at("%.1f degrees RMSE " % self.calibration.rms_error, 35, line+1, colour=screen.COLOUR_CYAN, bg=screen.COLOUR_BLACK)
-            
+            screen.print_at("Min latitude: %+.1f deg" % np.degrees(self.min_latitude), 66, line+1, colour=screen.COLOUR_CYAN, bg=screen.COLOUR_BLACK)
 
         else:
             screen.print_at("UNCALIBRATED", 0, 1, colour=screen.COLOUR_RED, bg=screen.COLOUR_BLACK)
@@ -130,16 +136,12 @@ class OSCMonitor:
                 screen.print_at(" "*50, fseq_x, i+3)
 
             # copy the touch list and print it out        
-            for i,(touch_id, (lon,lat)) in enumerate(touch_list.items()):                                    
-                    
+            for i,(touch_id, (lon,lat)) in enumerate(touch_list.items()):                                                        
                     screen.print_at("(%05d) \t lon:%3.0f lat:%3.0f" % (i, np.degrees(lon), np.degrees(lat)), fseq_x, i+3, colour=screen.COLOUR_YELLOW)
                 
             # render the sphere view
             self.render_sphere(screen, touch_list)
 
-        
-            
-        
          # exceptions while receiving packets
         screen.print_at(">"+self.last_exception, 0, 21, colour=screen.COLOUR_WHITE, bg=screen.COLOUR_RED)
 
@@ -154,6 +156,10 @@ class OSCMonitor:
             # must convert calibrated touch to plain float tuple
             lon, lat = self.calibration.get_calibrated_touch(x,y)
             return (float(lon), float(lat))
+
+
+    def get_filtered_touches(self):                
+        return {id:touch for id,touch in self.touch_list.items() if touch[1]>self.min_latitude}
 
     # the actual message handler
     # reads OSC messages, broadcasts ZMQ back
@@ -171,7 +177,8 @@ class OSCMonitor:
             if data[0]=='fseq':
                 # frame complete
                 self.last_fseq = data[1]
-                self.last_touch_list = self.touch_list
+                # filter out too low touches
+                self.last_touch_list = self.get_filtered_touches()
                 self.touch_list = {}                
                 # broadcast the raw touches themselves
                 self.zmq_socket.send_multipart(["TOUCH", json.dumps({"touches":self.last_touch_list, 
@@ -244,10 +251,11 @@ class OSCMonitor:
 
         # try to import calibration
         # if not explicitly disabled with --no_calibration
-        
+        self.min_latitude = -90        
         if not no_calibration:
             try:                
                 self.calibration = Calibration(calibration)
+                self.min_latitude = self.calibration.min_latitude
             except CalibrationException:
                 self.calibration = None
         else:

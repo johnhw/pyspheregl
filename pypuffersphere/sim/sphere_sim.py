@@ -44,8 +44,6 @@ class SphereViewer:
 
         self.finger_point_shader = mkshader(["sphere.vert", "sphere_sim/finger_point_nice.vert"], 
         ["sphere_sim/finger_point_nice.frag"])     
-        #self.finger_line_shader = mkshader(["sphere.vert", "sphere_sim/finger_line.vert"],  
-        #["sphere_sim/finger_line.frag"], geoms=["sphere.vert", "sphere_sim/finger_line.gs"])     
         self.finger_line_shader = mkshader(["sphere.vert", "sphere_sim/finger_line.vert"],  
         ["user/line.frag"], geoms=["sphere.vert", "user/line.gs"])     
         self.sphere_map_shader = mkshader(["sphere.vert", "sphere_sim/sphere_map.vert"],
@@ -261,7 +259,7 @@ class SphereViewer:
                     mx, my = touch_pos                    
                     # read the pixels, convert back to radians (from unsigned bytes)
                     glReadPixels(mx, my, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel_data)                                                
-                    sphere_lon, sphere_lat =  ((pixel_data[0]/255.0)-0.5)*2*np.pi, ((pixel_data[1] / 255.0) -0.5) * -np.pi,
+                    sphere_lon, sphere_lat =  ((pixel_data[0]/255.0)-0.5)*2*np.pi, ((pixel_data[1] / 255.0) -0.5) * np.pi,
                     # tell the touch manager where the touch is
                     self.rotation_manager.set_sphere_touch(sphere_lon, sphere_lat)
 

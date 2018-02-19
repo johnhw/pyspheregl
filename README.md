@@ -76,8 +76,8 @@ Will try to load `calibration.py` from the current directory as the calibration
     * +ve longitude goes West (left if facing longitude 0)
     * -ve longitude goes East (right if facing longitude 0)
 
-* `[x, -pi]` = `npole`
-* `[x, pi]` = `spole`
+* `[x, pi]` = `npole`
+* `[x, -pi]` = `spole`
 * `[0,0]` = `gmq`
 * `[pi, 0]` = `wmq`
 * `[-pi, 0]` = `emq`

@@ -54,8 +54,8 @@ def augment_calibration(calibration):
 
     # remove extreme targets which could not be hit (distance > 1 radian)
 
-    calibration["target_lon"] = calibration["target_lon"] % (2*np.pi) - np.pi
-    calibration["touch_lon"] = calibration["touch_lon"] % (2*np.pi) - np.pi
+    calibration["target_lon"] = calibration["target_lon"] 
+    calibration["touch_lon"] = calibration["touch_lon"] 
     
     # calculate co-ordinates in azimuthal space
 
@@ -81,10 +81,10 @@ def get_calibrated_touch(tuio_x, tuio_y, gp):
     mode selects the correction mode, which can be one 'gp', 'cubic', 'quadratic', 'constant', 'none'            
     """
     
-    lon, lat = sphere.tuio_to_polar(tuio_x, tuio_y)
-    lon = lon % (2*pi) - pi    
+    lon, lat = sphere.tuio_to_polar(tuio_x, tuio_y)    
     lon,lat = gp_adjust(lon, lat, gp)
-    return (lon+pi)%(2*pi), lat
+    return lon, lat
+    
 
 
 def error_distribution(calibration, fn):
@@ -145,6 +145,11 @@ class Calibration(object):
         print "%d unique targets identified; %d repeats per target" % (self.reps, self.unique)
         print
         
+        print("Minimum latitude is %1.f" % np.degrees(np.min(calibration["target_lat"])))
+
+        # allow up to 5 degrees below min latitude
+        self.min_latitude = np.min(calibration["target_lat"]) - np.radians(5)
+
         self.gp = train_gp(calibration)       
         error = error_distribution(calibration, lambda x,y:gp_adjust(x,y,self.gp))
         self.rms_error = rms(error)

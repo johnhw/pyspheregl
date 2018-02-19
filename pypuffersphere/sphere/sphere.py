@@ -33,6 +33,19 @@ def polar_to_az(lon, lat):
     r = (np.pi/2-lat)/np.pi          
     x,y = r * np.cos(lon), r*np.sin(lon)
     return x,y
+
+
+def rawaz_to_polar(theta, r):
+    """Convert azimuthal x,y to polar co-ordinates"""
+    lat = -r * np.pi + np.pi/2
+    lon = theta
+    return lon, lat
+    
+def polar_to_rawaz(lon, lat):    
+    """Convert polar to azimuthal x,y co-ordinates """
+    r = (np.pi/2-lat)/np.pi              
+    return lon, r
+        
     
 def spiral_layout(n, C=3.6):
     """Return the spherical co-ordinates [phi, theta] for a uniform spiral layout
@@ -359,6 +372,9 @@ def cartesian_to_spherical(pt):
     lat = np.arccos(pt[2]) - np.pi/2
     lon = np.arctan2(pt[1], pt[0])
     return lon, lat
+
+def cart_to_polar(x,y,z):
+    return cartesian_to_spherical([x,y,z])
     
 def tangent_coord_system(origin, up_point):
     """Given a pair of points in Cartesian co-ordinates on a unit sphere,

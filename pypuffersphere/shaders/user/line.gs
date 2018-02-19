@@ -7,7 +7,7 @@ out vec4 f_color;
 
 vec4 az_position_from_xy(vec2 position)
 {
-    vec2 pos = vec2(position.x, -position.y);
+    vec2 pos = vec2(position.x, position.y);
     vec3 az = polar_to_azimuthal(pos);
     return vec4(az.x,az.y,0,1);
 }
