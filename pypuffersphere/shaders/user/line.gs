@@ -2,8 +2,8 @@
 layout(lines) in;
 layout(line_strip, max_vertices = 64) out;
 
-in float brightness[];
-out float f_brightness;
+in vec4 g_color[];
+out vec4 f_color;
 
 vec4 az_position_from_xy(vec2 position)
 {
@@ -17,7 +17,6 @@ void main()
     vec2 p1 = gl_in[0].gl_Position.xy;
     vec2 p2 = gl_in[1].gl_Position.xy;
         
-    f_brightness = brightness[0]; // passthrough the line brightness
 
     // compute distance, in spherical units
     float d = spherical_distance(p1, p2);
@@ -40,6 +39,7 @@ void main()
         float lat=atan(z,sqrt(sqr(x)+sqr(y)));
         float lon=atan(y,x);        
         gl_Position = az_position_from_xy(vec2(lon, lat));
+        f_color = (1-f)*g_color[0] + f*g_color[1];
         EmitVertex();            
     }
     

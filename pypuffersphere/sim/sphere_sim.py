@@ -18,15 +18,15 @@ def resource_file(fname):
     dir_path = os.path.dirname(os.path.realpath(__file__))        
     return os.path.join(dir_path, "..", fname)
 
-
-
 def getshader(f):
     return resource_file(os.path.join("shaders", f))
 
 
 def mkshader(verts, frags, geoms=None):
     geoms = geoms or []
-    return shader.shader_from_file([getshader(c) for c in verts], [getshader(c) for c in frags], geoms=[getshader(c) for c in geoms])
+    return shader.shader_from_file([getshader(c) for c in verts], 
+    [getshader(c) for c in frags], 
+    geoms=[getshader(c) for c in geoms])
 
 class SphereViewer:
 
@@ -44,14 +44,16 @@ class SphereViewer:
 
         self.finger_point_shader = mkshader(["sphere.vert", "sphere_sim/finger_point_nice.vert"], 
         ["sphere_sim/finger_point_nice.frag"])     
+        #self.finger_line_shader = mkshader(["sphere.vert", "sphere_sim/finger_line.vert"],  
+        #["sphere_sim/finger_line.frag"], geoms=["sphere.vert", "sphere_sim/finger_line.gs"])     
         self.finger_line_shader = mkshader(["sphere.vert", "sphere_sim/finger_line.vert"],  
-        ["sphere_sim/finger_line.frag"], geoms=["sphere.vert", "sphere_sim/finger_line.gs"])     
+        ["user/line.frag"], geoms=["sphere.vert", "user/line.gs"])     
         self.sphere_map_shader = mkshader(["sphere.vert", "sphere_sim/sphere_map.vert"],
          ["sphere_sim/sphere_map.frag"])        
         self.touch_shader = mkshader(["sphere.vert", "sphere_sim/sphere_touch.vert"], 
         ["sphere_sim/sphere_touch.frag"])                
         self.whole_shader = mkshader(["sphere.vert", "user/whole_sphere.vert"], 
-                                    ["user/whole_sphere_rgb.frag"])        
+                                    ["user/whole_sphere_tex.frag"])        
         
         n_subdiv = 128        
         quad_indices, quad_verts, _ = make_unit_quad_tile(n_subdiv)    
