@@ -8,6 +8,8 @@ import sphere
 import numpy as np
 wall_clock = timeit.default_timer
 
+from pypuffersphere.sphere.touch_calibration import Calibration, CalibrationException
+
 # logger for debug messages, when handling socket comms
 import logging
 logging.basicConfig(filename='touch_zmq.log', level=logging.DEBUG, 
@@ -72,24 +74,43 @@ class OSCMonitor:
         
         self.last_frame = t 
 
+        line = 0
+
         # status line
-        screen.print_at("MSG: %15s" % self.msg, 0, 0, colour=screen.COLOUR_CYAN)
-        screen.print_at("OSC: %10s:%5d" % (self.osc_ip, self.osc_port), 25, 0, colour=screen.COLOUR_YELLOW)        
-        screen.print_at("ZMQ: %5d" % self.zmq_port, 66, 0, colour=screen.COLOUR_MAGENTA)
+        screen.print_at("MSG: %15s" % self.msg, 0, line, colour=screen.COLOUR_CYAN)
+        screen.print_at("OSC: %10s:%5d" % (self.osc_ip, self.osc_port), 25, line, colour=screen.COLOUR_YELLOW)        
+        screen.print_at("ZMQ: %5d" % self.zmq_port, 66, line, colour=screen.COLOUR_MAGENTA)
+        line += 1
 
         # calibration line
         if self.calibration is not None:
-            screen.print_at(self.calibration_name, 0, 1, colour=screen.COLOUR_MAGENTA, bg=screen.COLOUR_BLACK)
+            
+            screen.print_at(self.calibration.fname, 0, line, colour=screen.COLOUR_MAGENTA, bg=screen.COLOUR_BLACK)        
+            screen.print_at("%d/%d targets, %d unique" % (self.calibration.used_targets, self.calibration.total_targets, self.calibration.unique), 5,  line+1, colour=screen.COLOUR_CYAN, bg=screen.COLOUR_BLACK)
+            screen.print_at("%.1f degrees RMSE " % self.calibration.rms_error, 35, line+1, colour=screen.COLOUR_CYAN, bg=screen.COLOUR_BLACK)
+            
+
         else:
             screen.print_at("UNCALIBRATED", 0, 1, colour=screen.COLOUR_RED, bg=screen.COLOUR_BLACK)
+        line += 3
 
-        # exceptions while receiving packets
-        screen.print_at(">"+self.last_exception, 0, 21, colour=screen.COLOUR_WHITE, bg=screen.COLOUR_RED)
+        # print out the heartbeat status
+        bg = screen.COLOUR_BLACK
+        fg = screen.COLOUR_WHITE
+        # danger...
+        if delta_t>1.0:
+            fg = screen.COLOUR_RED
+        # it's gone; go full red
+        if delta_t>5:
+            fg = screen.COLOUR_BLACK
+            bg = screen.COLOUR_RED
+        screen.print_at("HEART:%5.1f" % delta_t, 0,line, colour=fg, bg=bg)
 
         # fseq and ntouches
         fseq_x = 44
-        screen.print_at("FSEQ:%8d" % self.last_fseq, fseq_x, 2, colour=screen.COLOUR_CYAN)
-        screen.print_at("NTOUCH:%2d" % len(self.last_touch_list), 66, 2, colour=screen.COLOUR_BLUE)        
+        screen.print_at("FSEQ:%8d" % self.last_fseq, fseq_x, line, colour=screen.COLOUR_CYAN)
+        screen.print_at("NTOUCH:%2d" % len(self.last_touch_list), 66, line, colour=screen.COLOUR_BLUE)        
+
 
         if self.full_trace:
             # dump the last packets to come through        
@@ -116,18 +137,12 @@ class OSCMonitor:
             # render the sphere view
             self.render_sphere(screen, touch_list)
 
-        # print out the heartbeat status
-        bg = screen.COLOUR_BLACK
-        fg = screen.COLOUR_WHITE
-        # danger...
-        if delta_t>1.0:
-            fg = screen.COLOUR_RED
-        # it's gone; go full red
-        if delta_t>5:
-            fg = screen.COLOUR_BLACK
-            bg = screen.COLOUR_RED
+        
             
-        screen.print_at("HEART:%5.1f" % delta_t, 0,2, colour=fg, bg=bg)
+        
+         # exceptions while receiving packets
+        screen.print_at(">"+self.last_exception, 0, 21, colour=screen.COLOUR_WHITE, bg=screen.COLOUR_RED)
+
         screen.refresh()
 
     def convert_touch(self, x, y):
@@ -212,7 +227,9 @@ class OSCMonitor:
             self.last_exception = str(err)
 
     
-    def monitor(self, port=3333, zmq_port=4000, ip="127.0.0.1", msg="/tuio/2Dcur", timeout=0.2, full_trace=False, console=True, no_calibration=False):
+    def monitor(self, port=3333, zmq_port=4000, ip="127.0.0.1", 
+        msg="/tuio/2Dcur", timeout=0.2, full_trace=False, console=True, 
+        no_calibration=False, calibration=None):
         """Listen to OSC messages on 3333. 
         Broadcast on the ZMQ PUB stream on the given TCP port."""        
         
@@ -227,19 +244,13 @@ class OSCMonitor:
 
         # try to import calibration
         # if not explicitly disabled with --no_calibration
-        self.calibration = None
+        
         if not no_calibration:
-            try:
-                import calibration
-                self.calibration = calibration
-            except ImportError:
+            try:                
+                self.calibration = Calibration(calibration)
+            except CalibrationException:
                 self.calibration = None
-            
-        if self.calibration is not None:
-            self.calibration_name = calibration.calibration_file
-        else:
-            self.calibration_name = "UNCALIBRATED"
-
+        
         # reset the timeouts
         self.last_packet = wall_clock() # last time a packet came in
         self.last_frame = wall_clock() # last time screen was redrawn

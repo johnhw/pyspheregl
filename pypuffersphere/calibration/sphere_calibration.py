@@ -3,19 +3,17 @@ import time,sys
 from pyglet.gl import *
 import pyglet
 from collections import defaultdict
-from pypuffersphere.sphere import sphere_sim, sphere
 import random
-import itertools
 import time
 import os
 from pypuffersphere.utils.np_vbo import IBuf, VBuf
+from pypuffersphere.sphere import sphere_sim, sphere
 from pypuffersphere.utils.shader import shader_from_file, ShaderVBO
 import timeit
 # high precision timing
 wall_clock = timeit.default_timer
 
 import argparse
-
 
 
 

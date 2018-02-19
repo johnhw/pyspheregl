@@ -2,7 +2,9 @@ from PIL import Image
 from pyglet.gl import *
 import numpy as np
 import StringIO
-
+import timeit
+# high precision timing
+wall_clock = timeit.default_timer
 
 class ColorGradient(object):
     def __init__(self, color_array):
