@@ -10,10 +10,11 @@ sphere_ext.include_dirs = [get_include()]
 setup(
     # basic info
     name = 'pypuffersphere',
-    version = '0.0.1',
+    version = '0.0.2',
     packages = find_packages(),
-    # also pygame, but can't easily install that like this 
-    install_requires = ['numpy', 'pyopengl', 'pyglet', 'Cython', 'pyosc' ],
+    
+    install_requires = ['numpy', 'pyopengl', 'pyglet', 'Cython', 'pyosc', 
+                        'attrs', 'scikt-learn', 'asciimatics', 'pyzmq'],
 
     # files 
     ext_modules = cythonize([sphere_ext]),

@@ -9,8 +9,8 @@ wall_clock = timeit.default_timer
 from pypuffersphere.utils import glskeleton,  gloffscreen, np_vbo, shader
 from pypuffersphere.sphere import sphere
 from pypuffersphere.utils.graphics_utils import make_unit_quad_tile
-from pypuffersphere.sphere.sim_rotation_manager import RotationManager
-from pypuffersphere.sphere.touch_manager import ZMQTouchHandler
+from pypuffersphere.sim.sim_rotation_manager import RotationManager
+from pypuffersphere.sim.touch_manager import ZMQTouchHandler
 
 
 

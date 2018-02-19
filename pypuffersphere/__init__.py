@@ -1,1 +1,1 @@
-__all__ = [ 'calibration', 'utils', 'sphere' ]
+__all__ = [ 'utils', 'sphere', 'sim', 'touch' ]

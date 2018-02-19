@@ -3,13 +3,6 @@ Python/Pyglet code for using rendering on the PufferSphere
 
 Dependencies:
 
-* attrs
-* pyglet
-* numpy
-* asciimatics
-* pyzmq
-* pyOSC
-
 
 # Module launching
 
@@ -22,14 +15,15 @@ Will try to load `calibration.py` from the current directory as the calibration
     Usage:       touch_zmq.py monitor [PORT] [ZMQ_PORT] [IP] [MSG] [TIMEOUT] [FULL_TRACE] [CONSOLE] [NO_CALIBRATION]
                 touch_zmq.py monitor [--port PORT] [--zmq-port ZMQ_PORT] [--ip IP] [--msg MSG] [--timeout TIMEOUT] [--full-trace FULL_TRACE] [--console CONSOLE] [--no-calibration NO_CALIBRATION]
 
+* `--calibration <fname>` specify a specific calibration file (otherwise use the latest one in `calibrations/`)
 * `--full_trace` Show a full trace of activity, including an ASCII sphere view
 * `--no_calibration` Don't use touch calibration
 * `--console=False` Don't show the console view
 
 ### Calibration
-`python -m pypuffersphere.calibration.sphere_calibration`
+`python -m pypuffersphere.touch.calibrate`
 
-        usage: sphere_calibration.py [-h] [--interleave] [--dummy] [--noprocess]
+        usage: calibrate.py [-h] [--interleave] [--dummy] [--noprocess]
                                     [-n NTARGETS] [-r REPETITIONS] [-l MINLATITUDE]
                                     [-t TOUCHTIME] [--test]
 

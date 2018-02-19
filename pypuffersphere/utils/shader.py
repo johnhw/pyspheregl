@@ -503,18 +503,6 @@ class Shader:
   
         return data
 
-
-
-
-
-
-
-
-
-
-    
-
-
 class ShaderVBO:
     def __init__(self, shader, ibo, buffers=None, textures=None, vars=None, primitives=GL_QUADS):
         self.shader = shader        

@@ -7,8 +7,9 @@ import random
 import time
 import os
 from pypuffersphere.utils.np_vbo import IBuf, VBuf
-from pypuffersphere.sphere import sphere_sim, sphere
-from pypuffersphere.sphere.sphere_sim import getshader
+from pypuffersphere.sphere import sphere
+import pypuffersphere.sim.sphere_sim as sphere_sim
+from pypuffersphere.sim.sphere_sim import getshader
 from pypuffersphere.utils.shader import shader_from_file, ShaderVBO
 import timeit
 # high precision timing
