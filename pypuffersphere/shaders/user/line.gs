@@ -5,6 +5,8 @@ layout(line_strip, max_vertices = 64) out;
 in vec4 g_color[];
 out vec4 f_color;
 
+uniform int subdiv = 32;
+
 vec4 az_position_from_xy(vec2 position)
 {
     vec2 pos = vec2(position.x, position.y);
@@ -27,7 +29,7 @@ void main()
     float lat2 = p2.y;
 
     // split up line into segments
-    int n = 32;
+    int n = subdiv;
     for(int i=0;i<n;i++)
     {
         float f = i/float(n-1);

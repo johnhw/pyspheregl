@@ -193,10 +193,10 @@ class OSCMonitor:
             # a single touch, accumulate into touch buffer
             if data[0]=='set':
                 touch_id, x, y = data[1:4]
-                y = 1 - y
-                lon, lat = self.convert_touch(x,y)
+                lon, lat = self.convert_touch(x, y)
                 self.touch_list[touch_id] = lon, lat
                 self.raw_list[touch_id] = x,y
+                print(x,y)
                 
             # system is alive
             if data[0]=='alive':
@@ -284,7 +284,7 @@ class OSCMonitor:
         self.touch_list = {}
         self.last_touch_list = {}
         self.raw_list = {}
-       
+        self.all_touches = {}
         
         self.packet_trace = [] # short history of packet message strings
 

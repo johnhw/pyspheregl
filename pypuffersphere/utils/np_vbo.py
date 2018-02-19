@@ -32,7 +32,7 @@ def create_vao(vbufs):
     # attach vbos
     for vbuf in vbufs:
         glEnableVertexAttribArray(vbuf.id)
-        attach_vbo(vbuf.buffer, vbuf.id)
+        attach_vbo(vbuf.buffer, vbuf.id)        
         if vbuf.divisor!=-1:
             glVertexAttribDivisor(vbuf.id, vbuf.divisor)
 

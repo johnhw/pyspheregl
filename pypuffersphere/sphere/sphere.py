@@ -19,19 +19,34 @@ def polar_to_tuio(lon, lat):
     Returns corresponding tuio x,y co-ordinates
     """
     x = (lon % (2*np.pi)) / (2*np.pi)
-    y = (lat + (np.pi/2)) / np.pi    
+    y = (lat + (np.pi/2)) / np.pi        
     return x, y
+
+    
+def tuio_to_polar(tuio_x, tuio_y):
+    """tuio_to_polar takes an x/y coordinate given in TUIO format (values 0 to 1)
+    where x measures rotation around the equator and y represents to angle between
+    the north and south poles.  
+
+    The returns these values as a long/lat pair, where long is a value between 0 and 2pi 
+    (rotation around the equator) and lat as a value between -pi/2(south pole) and pi/2 (north pole)"""
+    lon = tuio_x*2*pi
+    if lon>np.pi:
+        lon -= np.pi * 2
+    lat = pi * (tuio_y) - (pi/2)
+    return lon, lat
+    
 
 def az_to_polar(x, y):
     """Convert azimuthal x,y to polar co-ordinates"""
     lat = -np.sqrt((x**2)+(y**2)) * np.pi + np.pi/2
-    lon = np.arctan2(y,x)
+    lon = np.arctan2(-y,x)
     return lon, lat
     
 def polar_to_az(lon, lat):    
     """Convert polar to azimuthal x,y co-ordinates """
     r = (np.pi/2-lat)/np.pi          
-    x,y = r * np.cos(lon), r*np.sin(lon)
+    x,y = r * np.cos(lon), -r*np.sin(lon)
     return x,y
 
 
@@ -66,17 +81,6 @@ def spiral_layout(n, C=3.6):
         thetas.append(theta)        
     return list(zip(thetas, phis))
  
-    
-def tuio_to_polar(tuio_x, tuio_y):
-    """tuio_to_polar takes an x/y coordinate given in TUIO format (values 0 to 1)
-    where x measures rotation around the equator and y represents to angle between
-    the north and south poles.  
-
-    The returns these values as a long/lat pair, where long is a value between 0 and 2pi 
-    (rotation around the equator) and lat as a value between -pi/2(south pole) and pi/2 (north pole)"""
-    lon = tuio_x*2*pi
-    lat = pi * tuio_y - (pi/2)
-    return lon, lat
 
 def polar_to_display(lon, lat, resolution=1200):
     """polar_to_display takes a lon,lat pair and returns an onscreen x,y co-ordinates

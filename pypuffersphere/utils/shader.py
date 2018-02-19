@@ -64,29 +64,40 @@ def if_in_use(f):
   
 import os
 
-def shader_from_file(verts, frags, path="shaders", geoms=None):
+
+# remove version lines from input shaders and replace with our own
+def version_clean(st):    
+    return "\n".join([line.strip() for line in st.splitlines() if not line.startswith('#version')])
+
+def shader_from_file(verts, frags,  geoms=None, path="shaders", version="430 core"):
     """Load vertex and fragment shaders from a list of files, and return the compiled shader"""
     v_shaders = []
+    v_shaders.append("#version "+version+"\n")
+    
+    print "\nCompiling shader:\t",
     for vert in verts:
+        
         with open(os.path.join(path,vert)) as v:
-                v_shaders.append(v.read())
+                print os.path.basename(vert),
+                v_shaders.append(version_clean(v.read()))
                 
     f_shaders = []
-    for frag in frags:
+    f_shaders.append("#version "+version+"\n")
+    for frag in frags:        
         with open(os.path.join(path,frag)) as f:
-                f_shaders.append(f.read())
+                print os.path.basename(frag), 
+                f_shaders.append(version_clean(f.read()))
                 
     g_shaders = []
     if geoms is not None and len(geoms)>0:
+        g_shaders.append("#version "+version+"\n")
         for geom in geoms:
             with open(os.path.join(path,geom)) as f:
-                    g_shaders.append(f.read())
-
-    print("-"*80)         
-    print('\nCompiling shader: %s, %s, %s' % (verts, frags, geoms))
-    
+                    print os.path.basename(geom),
+                    g_shaders.append(version_clean(f.read()))
+         
     _shader = Shader(vert=v_shaders, frag=f_shaders, geom=g_shaders)
-    print("-"*80)
+    
     return _shader
 
 class Shader:
@@ -137,8 +148,9 @@ class Shader:
         buffer = create_string_buffer(temp.value)
         # retrieve the log text
         glGetShaderInfoLog(shader, temp, None, buffer)
-           
-        print(buffer.value)
+
+        if len(buffer.value)>5:   
+            print(buffer.value)
         
         if not status:
             
@@ -165,7 +177,9 @@ class Shader:
         glGetProgramiv(self.handle, GL_INFO_LOG_LENGTH, byref(temp))
         buffer = create_string_buffer(temp.value)        
         glGetProgramInfoLog(self.handle, temp, None, buffer)        
-        print(buffer.value)
+        
+        if len(buffer.value)>5:   
+            print(buffer.value)
         
         if not status:            
             raise GLSLError("Failed to link shader")
@@ -374,7 +388,7 @@ class Shader:
                 type_info[var_name] = var_info
   
         self._uniform_type_info = type_info
-        print(type_info)
+        print "\nUniforms:", " ".join(type_info.keys())
   
 
     def _uniform_loc_storage_and_type(self, var):
@@ -522,11 +536,11 @@ class ShaderVBO:
             
             # set the locations from the shader given the buffer names
             for name,vbuf in buffers.items():
-                id = self.shader.attribute_location(name)
-                print(name)
+                id = self.shader.attribute_location(name)                
                 if id<0:
                     raise GLSLError("Could not find attribute %s in shader" % name)
                 vbuf.id = id
+                vbuf.name = name
                 print("attr: %s -> %d" % (name, id))
                 self.buffers[name] = vbuf
                 vbos.append(vbuf)

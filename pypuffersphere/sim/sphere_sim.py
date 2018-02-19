@@ -101,7 +101,7 @@ class SphereViewer:
 
     def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, simulate=True, auto_spin=False, draw_fn=None, 
         tick_fn=None, debug_grid=0.1, test_render=False, show_touches=True,
-        zmq_address="tcp://localhost:4000", touch_fn=None):
+        zmq_address="tcp://localhost:4000", touch_fn=None, simulate_touches = True):
         self.simulate = simulate
         self.show_touches = show_touches
         self.debug_grid = debug_grid # overlaid grid on sphere simulation
@@ -121,13 +121,13 @@ class SphereViewer:
                                               tick_fn=self.tick, mouse_fn=self.mouse, key_fn=self.key, exit_fn=self._exit, window_size=window_size)
 
         self.touch_manager = ZMQTouchHandler(zmq_address)
-        
+        self.simulate_touches = simulate_touches
 
         if not self.simulate:
             cx = window_size[0] - sphere_resolution
-            cy = window_size[1] - sphere_resolution            
-            #glViewport(cx/2,0,sphere_resolution,sphere_resolution)
+            cy = window_size[1] - sphere_resolution                        
             glViewport(cx/2,0,sphere_resolution,sphere_resolution)
+            self.simulate_touches = False
         
         self.make_quad()
 
@@ -183,7 +183,8 @@ class SphereViewer:
     def tick(self):        
         if self.tick_fn:
             self.tick_fn()
-        #self.rotation_manager.tick() # simulation rotation
+        if self.simulate_touches:
+            self.rotation_manager.tick() # simulation rotation
         self.touch_manager.tick(self.touch_fn) # touch handling
             
     def draw_touch_points(self):
@@ -196,6 +197,7 @@ class SphereViewer:
     
         # force the simulated touch to be drawn
         self.touch_pts[0:2,0:2] = pt        
+        self.touch_pts[0:2,1] = -self.touch_pts[0:2,1]
         self.touch_pts[0:2,2] = 1.0
         
         # we write in the touches in order:
@@ -214,7 +216,6 @@ class SphereViewer:
             
             i += 2
 
-        print(i)
         self.touch_buf.set(self.touch_pts)
         self.touch_line_render.draw()      
         self.touch_render.draw()
@@ -234,13 +235,15 @@ class SphereViewer:
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
                  
         if not self.simulate:
-            self.draw_fn()
+            if self.draw_fn is not None:
+                self.draw_fn()
             if self.show_touches:
                 self.draw_touch_points()
         else:
             # draw onto the FBO texture
-            with self.fbo as f:                
-                self.draw_fn()   
+            with self.fbo as f:         
+                if self.draw_fn is not None:       
+                    self.draw_fn()   
                 if self.show_touches:                   
                     self.draw_touch_points()          
                 

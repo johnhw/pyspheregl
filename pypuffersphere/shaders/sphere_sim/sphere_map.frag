@@ -34,7 +34,7 @@ vec3 grid(vec2 sphere, float spacing)
 void main(void)
 {          
      // look up the texture at the UV coordinates
-    vec4 tex_color = texture2D(quadTexture, texCoord);
+    vec4 tex_color = texture2D(quadTexture, vec2(texCoord.x, -texCoord.y));
     tex_color.rgb *= illumination;
     frag_color = tex_color;
     frag_color.rgb += grid_bright * grid(sphere, grid_space);    

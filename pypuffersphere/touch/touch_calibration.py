@@ -19,6 +19,7 @@ def train_gp(calibration, subsample=None):
     if subsample is not None:
         unique_targets = unique_targets.loc[random.sample(unique_targets.index, subsample)]
         
+    print(unique_targets)
     target_x = unique_targets["target_az_x"]
     target_y = unique_targets["target_az_y"]
     corr_x = unique_targets["touch_az_x"]
@@ -36,7 +37,7 @@ def train_gp(calibration, subsample=None):
         
 def gp_adjust(lon, lat, gp):
     x,y,z = sphere.spherical_to_cartesian((lon, lat))
-    az_x, az_y = sphere.polar_to_az(lon, lat)
+    az_x, az_y = sphere.polar_to_az(lon, lat)    
     res = gp.predict([[x,y,z]])
     xc, yc = res[0]    
     corr_touch_lon, corr_touch_lat = sphere.az_to_polar(az_x+xc, az_y+yc)
@@ -54,8 +55,8 @@ def augment_calibration(calibration):
 
     # remove extreme targets which could not be hit (distance > 1 radian)
 
-    calibration["target_lon"] = calibration["target_lon"] 
-    calibration["touch_lon"] = calibration["touch_lon"] 
+    calibration["target_lon"] = calibration["target_lon"] % 2*np.pi 
+    calibration["touch_lon"] = calibration["touch_lon"] % 2*np.pi 
     
     # calculate co-ordinates in azimuthal space
 
@@ -126,6 +127,8 @@ class Calibration(object):
         # compute distances from estimated touches (w/o calibration) and target touches        
         calibration["distance"] = [sphere.spherical_distance((r["target_lon"], r["target_lat"]),
                                                         (r["touch_lon"], r["touch_lat"])) for ix, r in calibration.iterrows()]
+
+        
         self.total_targets = len(calibration)
         
         print "Read %d calibration targets" % self.total_targets
@@ -140,8 +143,8 @@ class Calibration(object):
             raise CalibrationException("Less than 5 calibration targets; aborting...")
             
         grouped = calibration.groupby(["target_x", "target_y"])
-        self.reps = int(0.5+self.total_targets/float(len(grouped)))
-        self.unique = len(grouped)
+        self.unique = int(0.5+self.total_targets/float(len(grouped)))
+        self.reps = len(grouped)
         print "%d unique targets identified; %d repeats per target" % (self.reps, self.unique)
         print
         

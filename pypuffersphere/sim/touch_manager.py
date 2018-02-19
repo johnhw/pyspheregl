@@ -88,7 +88,6 @@ class TouchManager:
                 # remove the slot it was using            
                 del self.active_touches[touch_obj.active_touch]
                 del self.graveyard[touch]
-        print(events)
         return {"events":events, "t":t, "fseq":fseq}
 
 

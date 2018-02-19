@@ -50,7 +50,7 @@ vec3 polar_to_azimuthal(vec2 lonlat)
     float lat = lonlat.y;
     float r = (M_PI/2-lat)/M_PI;
     az.x = r * cos(lon);
-    az.y = r * sin(lon);
+    az.y = -r * sin(lon);
     az.z = r;
     return az;
 }
