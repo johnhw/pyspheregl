@@ -26,7 +26,7 @@ class Primitives(object):
         line_pts = np.array([refs['npole'], refs['gmq'], refs['gmq'], refs['wmq'], refs['gmq'], refs['emq']])
         
         
-        whole_shader = shader_from_file([getshader("sphere.vert"), getshader("user/whole_sphere.vert")], [getshader("user/whole_sphere_rgb.frag")])
+        whole_shader = shader_from_file([getshader("sphere.vert"), getshader("user/whole_sphere.vert")], [getshader("user/whole_sphere_grid.frag")])
 
         point_shader = shader_from_file([getshader("sphere.vert"), getshader("user/point.vert")], [getshader("user/point.frag")])
         line_shader = shader_from_file([getshader("sphere.vert"), getshader("user/line.vert")], [getshader("user/line.frag")], 
