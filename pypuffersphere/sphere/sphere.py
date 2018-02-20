@@ -18,8 +18,11 @@ def polar_to_tuio(lon, lat):
     (rotation around the equator) and lat as a value between -pi/2(south pole) and pi/2 (north pole)
     Returns corresponding tuio x,y co-ordinates
     """
-    x = (lon % (2*np.pi)) / (2*np.pi)
-    y = (lat + (np.pi/2)) / np.pi        
+    lon = (lon - np.pi) % (2*np.pi)
+    if lon<0:
+        lon += 2*np.pi
+    x = lon / (2*np.pi) + 0.5
+    y = 1-((lat + (np.pi/2)) / np.pi)    
     return x, y
 
     
@@ -30,10 +33,10 @@ def tuio_to_polar(tuio_x, tuio_y):
 
     The returns these values as a long/lat pair, where long is a value between 0 and 2pi 
     (rotation around the equator) and lat as a value between -pi/2(south pole) and pi/2 (north pole)"""
-    lon = tuio_x*2*pi
+    lon = ((tuio_x-0.5)*2*pi + np.pi) % (2*np.pi)
+    lat = pi * (1-tuio_y) - (pi/2)
     if lon>np.pi:
-        lon -= np.pi * 2
-    lat = pi * (tuio_y) - (pi/2)
+        lon -= 2*np.pi
     return lon, lat
     
 

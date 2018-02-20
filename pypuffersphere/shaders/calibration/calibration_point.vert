@@ -2,7 +2,7 @@
 layout(location=0) in vec2 position;
 
 
-
+out float bar_bright;
 out vec4 color;
 out vec2 polar;
 uniform int target;
@@ -19,12 +19,13 @@ void main()
     if(target==gl_VertexID)
     {
         color = vec4(selected_color,1.0);        
-
+        bar_bright = 1.0;
         gl_PointSize = 100.0 + cos(t*2)*20.0;
     }
     else
     {
         color = vec4(0.8, 0.8, 0.8, 1.0);
+        bar_bright = 0.0;
         gl_PointSize = 30.0;
     }
     

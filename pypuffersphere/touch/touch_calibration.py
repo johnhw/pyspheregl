@@ -18,30 +18,29 @@ def train_gp(calibration, subsample=None):
     # subsample if required
     if subsample is not None:
         unique_targets = unique_targets.loc[random.sample(unique_targets.index, subsample)]
-        
-    print(unique_targets)
-    target_x = unique_targets["target_az_x"]
-    target_y = unique_targets["target_az_y"]
-    corr_x = unique_targets["touch_az_x"]
-    corr_y = unique_targets["touch_az_y"]
-    resid_x = np.array(target_x - corr_x)
-    resid_y = np.array(target_y - corr_y)    
+
+    tx, ty, tz = sphere.spherical_to_cartesian((unique_targets["target_lon"], unique_targets["target_lat"]))
+
     x,y,z = sphere.spherical_to_cartesian((unique_targets["touch_lon"], 
                                             unique_targets["touch_lat"]))    
-    target = np.vstack((x,y,z)).transpose()     
-    residual = np.vstack((resid_x, resid_y)).T
-    gp = gaussian_process.GaussianProcessRegressor()
+
+    
+    target = np.vstack((x,y,z)).transpose()       
+    residual = np.vstack((tx, ty, tz)).T
+    gp = gaussian_process.GaussianProcessRegressor(alpha=1e-3)
     gp.fit(target, residual)
     return gp
 
         
 def gp_adjust(lon, lat, gp):
     x,y,z = sphere.spherical_to_cartesian((lon, lat))
-    az_x, az_y = sphere.polar_to_az(lon, lat)    
     res = gp.predict([[x,y,z]])
-    xc, yc = res[0]    
-    corr_touch_lon, corr_touch_lat = sphere.az_to_polar(az_x+xc, az_y+yc)
+    xc, yc, zc = res[0] + np.array([x,y,z])
+    corr_touch_lon, corr_touch_lat = sphere.cart_to_polar(xc, yc, zc)
     return corr_touch_lon, corr_touch_lat
+
+def fix_angle(x):
+    return np.arctan2(np.sin(x), np.cos(x))
 
 
 def augment_calibration(calibration):
@@ -53,20 +52,11 @@ def augment_calibration(calibration):
     xys = np.array([sphere.polar_to_tuio(lon,lat) for lon,lat in zip(lons,lats)])
     calibration["target_x"],calibration["target_y"] = xys[:,0], xys[:,1]
 
-    # remove extreme targets which could not be hit (distance > 1 radian)
+    # fix angles
 
-    calibration["target_lon"] = calibration["target_lon"] % 2*np.pi 
-    calibration["touch_lon"] = calibration["touch_lon"] % 2*np.pi 
+    calibration["target_lon"] = fix_angle(calibration["target_lon"])
+    calibration["touch_lon"] = fix_angle(calibration["touch_lon"])
     
-    # calculate co-ordinates in azimuthal space
-
-    lons, lats = calibration["touch_lon"], calibration["touch_lat"]
-    xy = np.array([sphere.polar_to_az(lon,lat) for lon,lat in zip(lons,lats)])
-    calibration["touch_az_x"],calibration["touch_az_y"] = xy[:,0], xy[:,1]
-
-    lons, lats = calibration["target_lon"], calibration["target_lat"]
-    xy = np.array([sphere.polar_to_az(lon,lat) for lon,lat in zip(lons,lats)])
-    calibration["target_az_x"],calibration["target_az_y"] = xy[:,0], xy[:,1]
 
 def latest_file(path, ext):
     dated_files = [(os.path.getmtime(os.path.join(path, fn)), os.path.basename(os.path.join(path, fn))) 
@@ -94,10 +84,23 @@ def error_distribution(calibration, fn):
     for ix, row in calibration.iterrows():
         lon, lat = row["target_lon"], row["target_lat"]
         tlon, tlat = row["touch_lon"], row["touch_lat"]
+        
         # compute offset from constant corrected
         lonc, latc = fn(tlon, tlat)
+        # plt.plot(lon, lat, 'ro')     
+        # plt.plot(lonc, latc, 'gx')
+        # plt.plot([lonc,tlon], [latc, tlat], 'b')
         d = sphere.spherical_distance((lon, lat), (lonc, latc))
-        ds.append(np.degrees(d))        
+        ds.append(np.degrees(d))      
+
+    # lons = np.random.uniform(-np.pi, np.pi, (30,))
+    # lats = np.random.uniform(-np.pi/4, np.pi/2, (30,))
+    # for lon, lat in zip(lons, lats):
+    #     lonc, latc = fn(lon, lat)
+    #     plt.plot([lon, lonc], [lat, latc], 'b')
+        
+        
+    # plt.show()
     return ds          
 
 def rms(x):
@@ -105,6 +108,8 @@ def rms(x):
 
 class CalibrationException(Exception):
     pass
+
+# import matplotlib.pyplot as plt
 
 class Calibration(object):
     def get_calibrated_touch(self, x, y):
@@ -124,11 +129,14 @@ class Calibration(object):
         calibration = pd.io.parsers.read_table(os.path.join("calibration", calibration_name), delimiter=",", skipinitialspace=True)
         augment_calibration(calibration)
 
+       
+
         # compute distances from estimated touches (w/o calibration) and target touches        
         calibration["distance"] = [sphere.spherical_distance((r["target_lon"], r["target_lat"]),
                                                         (r["touch_lon"], r["touch_lat"])) for ix, r in calibration.iterrows()]
 
         
+       
         self.total_targets = len(calibration)
         
         print "Read %d calibration targets" % self.total_targets
@@ -153,8 +161,15 @@ class Calibration(object):
         # allow up to 5 degrees below min latitude
         self.min_latitude = np.min(calibration["target_lat"]) - np.radians(5)
 
+
+        # plt.plot(calibration["target_lon"], calibration["target_lat"], 'ro')
+        # plt.plot(calibration["touch_lon"], calibration["touch_lat"], 'go')
+        # plt.show()
+
         self.gp = train_gp(calibration)       
         error = error_distribution(calibration, lambda x,y:gp_adjust(x,y,self.gp))
+
+        # plt.show()
         self.rms_error = rms(error)
         self.median_error =  np.median(error)
         

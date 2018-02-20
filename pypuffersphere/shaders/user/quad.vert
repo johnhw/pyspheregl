@@ -32,11 +32,12 @@ void main()
     
     mat4 rotation = rotationMatrix(up, pos.x*scale);
     mat4 rotation2 = rotationMatrix(right, pos.y*scale);    
+    // axis rotation disabled for now
+    mat4 rotation3 = rotationMatrix(fwd, position.w * 0);    
     
 
-    pos_3d =  rotation2 * rotation *  vec4(fwd, 1.0);  
-    
-    
+    pos_3d =  rotation3 * rotation2 * rotation *  vec4(fwd, 1.0);  
+        
     // convert to sphere space 
     vec2 polar = cartesian_to_polar(pos_3d.xyz);
     vec3 az = polar_to_azimuthal(polar);

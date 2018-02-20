@@ -136,7 +136,7 @@ class OSCMonitor:
                 screen.print_at(" "*50, fseq_x, i+3)
 
             # copy the touch list and print it out        
-            for i,(touch_id, (lon,lat)) in enumerate(touch_list.items()):          
+            for i,(touch_id, (lon,lat)) in enumerate(self.all_touches.items()):          
                                                             
                     x, y = self.raws[touch_id]
                     screen.print_at("(%05d) \t lon:%3.0f lat:%3.0f x:%+1.4f y:%1.4f" % (touch_id, 
@@ -201,7 +201,7 @@ class OSCMonitor:
                 self.touch_list[touch_id] = lon, lat
                 self.raw_list[touch_id] = x, y
                 self.raws[touch_id] = x,y
-                print(x,y)
+             
                 
             # system is alive
             if data[0]=='alive':
@@ -263,7 +263,8 @@ class OSCMonitor:
             try:                
                 self.calibration = Calibration(calibration)
                 self.min_latitude = self.calibration.min_latitude
-            except CalibrationException:
+            except (CalibrationException, OSError) as e:
+                print(e)
                 self.calibration = None
         else:
             self.calibration = None

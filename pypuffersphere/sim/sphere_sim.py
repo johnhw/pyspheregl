@@ -176,6 +176,10 @@ class SphereViewer:
                 
                 
     def key(self, event, symbol, modifiers):
+        if event=='press' and symbol==pyglet.window.key.LSHIFT:
+            self.rotation_manager.lock_rotation()
+        if event=='release' and symbol==pyglet.window.key.LSHIFT:
+            self.rotation_manager.unlock_rotation()        
         if symbol==pyglet.window.key.ESCAPE:       
             self.exit()     
                         

@@ -29,6 +29,13 @@ class RotationManager:
         self.touch_pos = (0,0)
         self._sphere_point = None # updated all the time in lon, lat format        
         self.sphere_point = (-1, -1)  # updated only while the (right) mouse is down
+        self.locked = False
+
+    def lock_rotation(self):
+        self.locked = True
+
+    def unlock_rotation(self):
+        self.locked = False
 
     def send_osc(self, addr, elements):
         """Send a message to the given address
@@ -101,6 +108,8 @@ class RotationManager:
     # simulated touch point moves
     def touch_drag(self, x, y):
         self.touch_pos = (x,y)
+        if not self.touch_is_down:
+            self.touch_down(x,y)
         
         
 
@@ -112,11 +121,11 @@ class RotationManager:
             self.target_spin = 0.0
         
         # smooth out polar rotation
-        self.spin = 0.9 *self.spin + 0.1*self.target_spin    
+        self.spin = 0.8 *self.spin + 0.2*self.target_spin    
         self.rotation[0] += self.spin
 
         # relax sphere back towards equatorial alignment with horizontal
-        if self.drag_start is None:
+        if self.drag_start is None and not self.locked:
             self.rotation[1] *= 0.95
 
         # send tuio if the touch is down        
