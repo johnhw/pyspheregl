@@ -31,7 +31,8 @@ class GLSkeleton:
         self.window.set_handler("on_resize", self.on_resize)      
         self.w, self.h = self.window.width, self.window.height
 
-        print("OpenGL version", pyglet.gl.gl_info.get_version(), pyglet.gl.gl_info.get_vendor())
+        print("OpenGL version %s %s" %(pyglet.gl.gl_info.get_version(), pyglet.gl.gl_info.get_vendor()))
+        print("Resolution: %d x %d" % (self.window.width, self.window.height))
         
         
         
@@ -57,11 +58,11 @@ class GLSkeleton:
         if self.mouse_fn:
             self.mouse_fn("move", x=x,y=y,dx=dx,dy=dy)
             
-    def on_mouse_drag(self, x,y, dx, dy, buttons, modifiers):
+    def on_mouse_drag(self, x,y, dx, dy, buttons, modifiers):        
         if self.mouse_fn:
             self.mouse_fn("drag", x=x,y=y,dx=dx,dy=dy,buttons=buttons,modifiers=modifiers)
                         
-    def on_mouse_press(self, x,y, buttons, modifiers):
+    def on_mouse_press(self, x,y, buttons, modifiers):    
         if self.mouse_fn:
             self.mouse_fn("press", x=x,y=y,buttons=buttons,modifiers=modifiers)
             

@@ -136,8 +136,11 @@ class OSCMonitor:
                 screen.print_at(" "*50, fseq_x, i+3)
 
             # copy the touch list and print it out        
-            for i,(touch_id, (lon,lat)) in enumerate(touch_list.items()):                                                        
-                    screen.print_at("(%05d) \t lon:%3.0f lat:%3.0f" % (touch_id, np.degrees(lon), np.degrees(lat)), fseq_x, i+3, colour=screen.COLOUR_YELLOW)
+            for i,(touch_id, (lon,lat)) in enumerate(touch_list.items()):          
+                                                            
+                    x, y = self.raws[touch_id]
+                    screen.print_at("(%05d) \t lon:%3.0f lat:%3.0f x:%+1.4f y:%1.4f" % (touch_id, 
+                    np.degrees(lon), np.degrees(lat), x, y), fseq_x, i+3, colour=screen.COLOUR_YELLOW)
                 
             # render the sphere view
             self.render_sphere(screen, self.all_touches)
@@ -180,14 +183,15 @@ class OSCMonitor:
                 # filter out too low touches
                 self.last_touch_list = self.get_filtered_touches()
                 self.all_touches = dict(self.touch_list)  
-                self.touch_list = {}                
+                
                 # broadcast the raw touches themselves
                 self.zmq_socket.send_multipart(["TOUCH", json.dumps({"touches":self.last_touch_list, 
                                                             "raw":self.raw_list,
                                                             "fseq":self.last_fseq, 
                                                             "stale":0,
                                                             "t":self.last_packet})])
-                self.raw_list = {}
+                
+                self.touch_list = {}  
                 
             
             # a single touch, accumulate into touch buffer
@@ -195,7 +199,8 @@ class OSCMonitor:
                 touch_id, x, y = data[1:4]
                 lon, lat = self.convert_touch(x, y)
                 self.touch_list[touch_id] = lon, lat
-                self.raw_list[touch_id] = x,y
+                self.raw_list[touch_id] = x, y
+                self.raws[touch_id] = x,y
                 print(x,y)
                 
             # system is alive
@@ -285,6 +290,7 @@ class OSCMonitor:
         self.last_touch_list = {}
         self.raw_list = {}
         self.all_touches = {}
+        self.raws = {}
         
         self.packet_trace = [] # short history of packet message strings
 

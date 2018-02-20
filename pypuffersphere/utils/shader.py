@@ -263,6 +263,35 @@ class Shader:
         loc = self.get_uniform(name)
         glUniformMatrix3fv(loc, 1, False, mat.astype(np.float32).ctypes.data_as(POINTER(c_float)))
 
+    # this program must be currently bound
+    # set the vertex attribute to a *constant* value 
+    # disregarding its array value
+    def attribi(self, id, *vals):
+        # check there are 1-4 values
+        if len(vals) in range(1, 5):
+            # select the correct function
+            { 1 : glVertexAttrib1i,
+                2 : glVertexAttrib2i,
+                3 : glVertexAttrib3i,
+                4 : glVertexAttrib4i
+                # retrieve the uniform location, and set
+            }[len(vals)](id, *vals)
+
+    # this program must be currently bound
+    # set the vertex attribute to a *constant* value 
+    # disregarding its array value
+    def attribf(self, id, vals):        
+        # check there are 1-4 values
+        if len(vals) in range(1, 5):
+            # select the correct function
+            { 1 : glVertexAttrib1f,
+                2 : glVertexAttrib2f,
+                3 : glVertexAttrib3f,
+                4 : glVertexAttrib4f
+                # retrieve the uniform location, and set
+            }[len(vals)](id, *vals)
+
+
     def attribute_location(self, name):
         if name not in self.attribs:
             self.attribs[name] = glGetAttribLocation(self.handle, name)
@@ -270,15 +299,22 @@ class Shader:
         return self.attribs[name]
         
 
-    def draw(self, ibo, vao, textures={}, vars={},  primitives=GL_QUADS, n_prims=0):
+    def draw(self, ibo, vao, textures={}, vars={}, attribs={}, primitives=GL_QUADS, n_prims=0):
         self.bind()
         # attach all relevant textures
         for t, tex in textures.items():
             glActiveTexture(GL_TEXTURE0+t)            
             glBindTexture(tex.target, tex.id)
         
-                          
+        # set constant attribs
+        for name,attrib in attribs.items():
+            id = self.attribute_location(name)                
+            if id<0:
+                raise GLSLError("Could not find attribute %s in shader" % name)            
+            glDisableVertexAttribArray(id)
+            self.attribf(id, attrib)                   
         # set uniforms
+
         # note that the type must be right here!        
         for var, value in vars.items():
             self.__setitem__(var, value)
@@ -518,7 +554,7 @@ class Shader:
         return data
 
 class ShaderVBO:
-    def __init__(self, shader, ibo, buffers=None, textures=None, vars=None, primitives=GL_QUADS):
+    def __init__(self, shader, ibo, buffers=None, textures=None, attribs=None, vars=None, primitives=GL_QUADS):
         self.shader = shader        
         self.ibo = ibo
         
@@ -529,6 +565,7 @@ class ShaderVBO:
         self.primitives = primitives
         buffers = buffers or {}
         textures = textures or {}
+        attribs = attribs or {}
         vars = vars or {}
         self.buffers_used = {}
         with self.shader as s:
@@ -548,6 +585,16 @@ class ShaderVBO:
             # bundle into a single vao
             self.vao = np_vbo.create_vao(vbos)
 
+            # set constant attribs
+            for name,attrib in attribs.items():
+                id = self.shader.attribute_location(name)                
+                if id<0:
+                    raise GLSLError("Could not find attribute %s in shader" % name)
+                        
+                print("constant attr: %s" % name)
+                glDisableVertexAttribArray(id)
+                self.shader.attribf(id, attrib)                   
+                
             for ix,(tex_name,tex) in enumerate(textures.items()):
                 # set the sampler to the respective texture unit
                 s.uniformi(tex_name, ix)       

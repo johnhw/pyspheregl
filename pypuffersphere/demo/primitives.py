@@ -40,6 +40,17 @@ class Primitives(object):
         ixs, quad, _ = make_unit_quad_tile(64)
         
         self.whole_vbo = ShaderVBO(whole_shader, IBuf(ixs), buffers={"quad_vtx": VBuf(quad)})
+
+
+        quad_shader = shader_from_file([getshader("sphere.vert"), getshader("user/quad.vert")], 
+        [getshader("user/quad_color.frag")])
+        ixs, quad, texs = make_unit_quad_tile(8)
+        
+        self.quad_vbo = ShaderVBO(quad_shader, IBuf(ixs), 
+        buffers={"quad_vtx": VBuf(quad, divisor=0),
+        "position":VBuf(pts, divisor=1)}, attribs={"fcolor":(0.5, 1.0, 0.2, 1.0)})
+        #"fcolor":VBuf(colors, divisor=1)
+
         self.viewer.start()
 
     def draw(self):
@@ -47,10 +58,11 @@ class Primitives(object):
         glClear(GL_COLOR_BUFFER_BIT)
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
         glEnable(GL_POINT_SPRITE)
+        self.quad_vbo.draw(n_prims=8)
         self.whole_vbo.draw()
         self.point_vbo.draw()
         self.line_vbo.draw()
-
+        
 
               
 if __name__=="__main__":

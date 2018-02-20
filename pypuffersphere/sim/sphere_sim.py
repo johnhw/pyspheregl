@@ -201,8 +201,8 @@ class SphereViewer:
         self.touch_pts[0:2,2] = 1.0
         
         # we write in the touches in order:
-        # current position, brightness
-        # origin poisition, 0
+        # current position (xy), brightness (z)
+        # origin poisition (xy), 0 (z)
         # this means the point shader will draw only the active positions
         # but the line shader will draw lines connecting them
         i = 2

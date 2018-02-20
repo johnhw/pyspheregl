@@ -63,6 +63,10 @@ class RotationManager:
             self.rotation[0] = self.last_rotation[0] + (self.drag_start[0] - new_pos[0]) * self.rotate_scale
             self.rotation[1] = self.last_rotation[1] + (self.drag_start[1] - new_pos[1]) * self.rotate_scale * 0.5
             self.last_touch = wall_clock()
+        else:
+            # we started dragging without a press?!
+            # just simulate the press
+            self.press(x, y)
 
     # left mouse up; sphere relaxes
     def release(self,x,y):
