@@ -216,8 +216,7 @@ class SphereViewer:
             self.touch_pts[i, 0:2] = touch.lonlat
             self.touch_pts[i, 2] = min(1.0, touch.duration*40)  - min(1.0, touch.dead_time*2)
             self.touch_pts[i+1, 0:2] = touch.origin
-            self.touch_pts[i+1, 2] = 0
-            
+            self.touch_pts[i+1, 2] = 0            
             i += 2
 
         self.touch_buf.set(self.touch_pts)
@@ -232,8 +231,7 @@ class SphereViewer:
         glClearColor(0.1, 0.1, 0.1, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        # enable point drawing for touch point
-        #glEnable(GL_POINT_SMOOTH)
+        # enable point drawing for touch point        
         glEnable(GL_LINE_SMOOTH)
         glEnable(GL_POINT_SPRITE)
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)

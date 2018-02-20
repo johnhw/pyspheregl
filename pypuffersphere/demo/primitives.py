@@ -56,7 +56,7 @@ class Primitives(object):
                             buffers={"quad_vtx": VBuf(quad, divisor=0),
                                     "position":VBuf(pts, divisor=1)}, 
                             attribs={"fcolor":(0.5, 1.0, 0.2, 0.25)},
-                            vars={"scale":0.25})
+                            vars={"scale":0.5})
 
         # whole sphere gradient, from an image texture
         grad_shader = shader_from_file([getshader("sphere.vert"), getshader("user/whole_sphere.vert")], [getshader("user/whole_sphere_gradient.frag")])
