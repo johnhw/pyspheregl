@@ -6,6 +6,13 @@ Dependencies:
 
 # Module launching
 
+## Quick demo of simulator
+* `python -m pypuffersphere.demo.world --test`
+
+* [Left click] rotate sphere
+* [SHIFT] lock sphere rotation
+* [Right click] simulate OSC message for touch
+
 ### **touch broadcast/monitor**
 `python -m pypuffersphere.sphere.touch_zmq monitor` 
 Will try to load `calibration.py` from the current directory as the calibration

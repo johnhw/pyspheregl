@@ -14,7 +14,6 @@ def train_gp(calibration, alpha=1e-2):
     
     Returns a GP object that performs the prediction."""
     unique_targets = calibration.copy()
-    
 
     tx, ty, tz = sphere.spherical_to_cartesian((unique_targets["target_lon"], unique_targets["target_lat"]))
     x,y,z = sphere.spherical_to_cartesian((unique_targets["touch_lon"], 
