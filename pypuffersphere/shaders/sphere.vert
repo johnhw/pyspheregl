@@ -36,7 +36,7 @@ float spherical_distance(vec2 p1, vec2 p2)
 vec2 cartesian_to_polar(vec3 cartesian)
 {
     vec3 norm_pos = normalize(cartesian);
-    float lat = acos(norm_pos.z) - M_PI/2;
+    float lat = acos(-norm_pos.z) - M_PI/2;
     float lon = atan(norm_pos.y, norm_pos.x);
     return vec2(lon, lat);
 }

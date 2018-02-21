@@ -17,7 +17,6 @@ void main(void)
      // note that we multiple with color to allow the alpha
      // to be faded to transparent at the sphere lower edge
     frag_color = tex_color * color;
-    frag_color = tex_color * color;
     // output the index to the second colorbuffer (if attached)
     obj_index = obj_id;
     obj_index.a = step(0.5, tex_color.a * color.a);

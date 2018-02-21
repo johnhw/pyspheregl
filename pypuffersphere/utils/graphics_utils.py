@@ -53,7 +53,23 @@ def load_image_and_fit(img_string, sz):
     image = Image.open(StringIO(img_string))
     image = fit_image(image, sz)        
     return pyglet.image.ImageData(image.width, image.height, 'RGB', image.tobytes(), pitch=-image.width * 3).get_mipmapped_texture()
-    
+
+
+def make_circle_fan(n_divs, radius=1.0):
+    # make a TRIANGLE_FAN style circle
+    vertices = [[0,0]]
+    indices = [0]
+    for i in range(n_divs):
+        angle = (i/float(n_divs)) * 2 * np.pi
+        x, y = np.cos(angle), -np.sin(angle)
+        vertices.append((x,y))
+        indices.append(i+1)
+    # end point
+    x, y = np.cos(0), -np.sin(0)        
+    vertices.append((x,y))
+    indices.append(n_divs+1)
+    return np.array(indices, dtype=np.uint32), np.array(vertices, dtype=np.float32)
+
     
 def make_unit_quad_tile(n_divs, x1=0.0, x2=1.0, y1=0.0, y2=1.0, tx1=0.0, tx2=1.0, ty1=0.0, ty2=1.0, n_quads=1):
     # subdivide a rectangle into n_divs x n_divs smaller sub-rectangles, with corresponding texture coordinates

@@ -10,14 +10,19 @@ from pypuffersphere.utils.shader import ShaderVBO, shader_from_file
 
 import time
 from pypuffersphere.utils.np_vbo import VBuf, IBuf
-from pypuffersphere.utils.graphics_utils import make_unit_quad_tile
+from pypuffersphere.utils.graphics_utils import make_unit_quad_tile, make_circle_fan
+import pypuffersphere.utils.transformations as tn
+
+    
 
 class Primitives(object):
     def __init__(self):
         self.viewer = sphere_sim.make_viewer(show_touches=True, draw_fn=self.draw, touch_fn=self.touch)
 
-        refs = {'npole':[0, np.pi/2], 'spole':[0,-np.pi/2], 'gmq':[0,0], 'wmq':[np.pi/2,0], 'emq':[-np.pi/2,0], 'rmq':[np.pi,0]}
-        colors = {'npole':[0,0,1,1], 'spole':[1,0,0,1], 'gmq':[0,1,0.5,1], 'rmq':[0.5,0,1,1], 'emq':[1,1,0,1], 'wmq':[0,1,1,1]}
+
+        refs = {'npole':[0.0, np.pi/2-0.0001], 'spole':[0,-np.pi/2], 'gmq':[0,0], 'wmq':[np.pi/2,0], 'emq':[-np.pi/2,0], 'rmq':[np.pi,0]}
+        colors = {'npole':[0,0,1,1], 'spole':[1,0,0,1], 'gmq':[0,1,0.5,1], 
+        'rmq':[0.5,0,1,1], 'emq':[1,1,0,1], 'wmq':[0,1,1,1]}
 
         ks = refs.keys()
         pts = np.array([refs[k] for k in ks], dtype=np.float32)
@@ -44,19 +49,36 @@ class Primitives(object):
         # create a subdivided quad to be drawn
         ixs, quad, texs = make_unit_quad_tile(64)
         
+        
         # grid shader, across the whole sphere
         whole_shader = shader_from_file([getshader("sphere.vert"), getshader("user/whole_sphere.vert")], [getshader("user/whole_sphere_grid.frag")])        
         self.whole_vbo = ShaderVBO(whole_shader, IBuf(ixs), 
                             buffers={"quad_vtx": VBuf(quad)})
 
 
+       
+
         # simple flat quad shader
         quad_shader = shader_from_file([getshader("sphere.vert"), getshader("user/quad.vert")], [getshader("user/quad_color.frag")])               
         self.quad_vbo = ShaderVBO(quad_shader, IBuf(ixs), 
                             buffers={"quad_vtx": VBuf(quad, divisor=0),
                                     "position":VBuf(pts, divisor=1)}, 
-                            attribs={"fcolor":(0.5, 1.0, 0.2, 0.25)},
+                            attribs={"fcolor":(0.5, 1.0, 0.2, 0.25),
+                                    "up_vector":(0.0,0.0,1.0)},
                             vars={"scale":0.5})
+
+        
+        # simple circle shader    
+        # uses same shader as the quads
+        # works for any planar polygon
+        circle_ixs, circle_verts = make_circle_fan(64)   
+        self.circle_vbo = ShaderVBO(quad_shader, IBuf(circle_ixs), 
+                            buffers={"quad_vtx": VBuf(circle_verts, divisor=0),
+                                    "position":VBuf(pts, divisor=1)}, 
+                            attribs={"fcolor":(0.5, 1.0, 0.2, 0.25)},
+                            vars={"scale":0.5}, primitives=GL_TRIANGLE_FAN)
+
+
 
         # whole sphere gradient, from an image texture
         grad_shader = shader_from_file([getshader("sphere.vert"), getshader("user/whole_sphere.vert")], [getshader("user/whole_sphere_gradient.frag")])
@@ -87,6 +109,7 @@ class Primitives(object):
         self.whole_vbo.draw()
         self.point_vbo.draw()
         self.line_vbo.draw()
+        self.circle_vbo.draw(n_prims=8)
         
         
         

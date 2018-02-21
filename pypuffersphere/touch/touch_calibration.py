@@ -5,7 +5,7 @@ import pickle
 import os, sys, time, random
 from sklearn import gaussian_process
 from pypuffersphere.sphere import sphere
-
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
 
 def train_gp(calibration, alpha=1e-2):
     """Train a squared-exponential Gaussian process to predict offsets
@@ -20,15 +20,17 @@ def train_gp(calibration, alpha=1e-2):
                                             unique_targets["touch_lat"]))    
     target = np.vstack((x,y,z)).transpose()       
     residual = np.vstack((tx, ty, tz)).T
+    
     gp = gaussian_process.GaussianProcessRegressor(alpha=alpha)
     gp.fit(target, residual)
+   
     return gp
 
         
 def gp_adjust(lon, lat, gp):
     x,y,z = sphere.spherical_to_cartesian((lon, lat))
     res = gp.predict([[x,y,z]])
-    xc, yc, zc = res[0] + np.array([x,y,z])
+    xc, yc, zc = res[0]
     corr_touch_lon, corr_touch_lat = sphere.cart_to_polar(xc, yc, zc)
     return corr_touch_lon, corr_touch_lat
 

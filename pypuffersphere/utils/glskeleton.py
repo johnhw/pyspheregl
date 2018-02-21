@@ -33,8 +33,7 @@ class GLSkeleton:
 
         print("OpenGL version %s %s" %(pyglet.gl.gl_info.get_version(), pyglet.gl.gl_info.get_vendor()))
         print("Resolution: %d x %d" % (self.window.width, self.window.height))
-        
-        
+                
         
 
     def on_resize(self, w, h):            
@@ -43,9 +42,9 @@ class GLSkeleton:
             return pyglet.event.EVENT_HANDLED
 
     def on_draw(self):
+        
         if self.draw_fn:
-            self.draw_fn()
-            
+            self.draw_fn()        
     def on_key_press(self, symbol, modifiers):
         if self.key_fn:
             self.key_fn("press", symbol, modifiers)
@@ -96,11 +95,7 @@ class GLSkeleton:
             self.exit_fn()
         pyglet.app.exit()
         
-    # this is the redraw code. Add drawing code between the "LOCK" and "END LOCK" sections
-    def flip(self):       
-          if self.draw_fn:
-            self.draw_fn()
-          
+
     #frame loop. Called on every frame. all calculation shpuld be carried out here     
     def tick(self, delta_t):  
         time.sleep(0.002) # yield!               
