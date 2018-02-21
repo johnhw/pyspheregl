@@ -21,6 +21,19 @@ class Finger:
     def __init__(self, last_xyz, last_t):
         self.last_xyz = np.array(last_xyz)
         self.last_t = last_t
+        self.last_velocities = []
+
+    def update_velocity(self, xyz, t):
+        dt = t - self.last_t
+        xyz = np.array(xyz)
+        dxyz = xyz - self.last_xyz
+        velocity = dxyz / dt
+        self.last_xyz = xyz
+        self.last_t = t
+        self.last_velocities.append(velocity)
+        if len(self.last_velocities)>5:
+            self.last_velocities.pop(0)
+        return dt, np.median(self.last_velocities, axis=0)
 
 class RotationHandler(object):
     def __init__(self, mode=FREEBALL, gain=1.0, base_damping=0.999, finger_damping=0.95):
@@ -63,11 +76,9 @@ class RotationHandler(object):
         # update angular velocities based on drag
         t = wall_clock()
         finger = self.fingers[id]
-        dt = t - finger.last_t
-        xyz = np.array(xyz)
+        dt, velocity = finger.update_velocity(xyz, t)
         rot = tn.quaternion_matrix(self.orientation)
         # get finger velocity vector
-        velocity = (xyz - finger.last_xyz) / (dt)                        
         # compute torque = point x velocity
         torque = np.cross(xyz, velocity)
         # axis switchery
@@ -87,12 +98,7 @@ class RotationTest(object):
         tick_fn=self.tick,
         touch_fn=self.touch)
         self.rotater = RotationHandler()                
-        #refs = {'npole':[0, np.pi/2], 'spole':[0,-np.pi/2], 'gmq':[0,0], 'wmq':[np.pi/2,0], 'emq':[-np.pi/2,0], 'rmq':[np.pi,0]}
-        #colors = {'npole':[0,0,1,1], 'spole':[1,0,0,1], 'gmq':[0,1,0.5,1], 'rmq':[0.5,0,1,1], 'emq':[1,1,0,1], 'wmq':[0,1,1,1]}
 
-        #ks = refs.keys()
-        #pts = np.array([refs[k] for k in ks], dtype=np.float32)
-        #colors = np.array([colors[k] for k in ks], dtype=np.float32)
         pts = np.array(sphere.spiral_layout(256))
         
         # point shader; simple coloured circles, with no spherical correction
