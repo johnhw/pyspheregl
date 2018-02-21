@@ -1,6 +1,6 @@
-import pypuffersphere.sphere.touch_sphere as touch_lib
+import pyspheregl.sphere.touch_sphere as touch_lib
 import time
-import pypuffersphere.sphere.sphere as sphere
+import pyspheregl.sphere.sphere as sphere
 import numpy as np
 import calibration
 calib_mode = 'cubic'

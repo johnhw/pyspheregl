@@ -3,18 +3,18 @@ import pyglet
 from pyglet.gl import *
 
 # sphere stuff
-from pypuffersphere.sim.sphere_sim import getshader, resource_file
-import pypuffersphere.sim.sphere_sim as sphere_sim
-import pypuffersphere.sphere.sphere as sphere
-from pypuffersphere.utils.shader import ShaderVBO, shader_from_file
+from pyspheregl.sim.sphere_sim import getshader, resource_file
+import pyspheregl.sim.sphere_sim as sphere_sim
+import pyspheregl.sphere.sphere as sphere
+from pyspheregl.utils.shader import ShaderVBO, shader_from_file
 
 import time
-from pypuffersphere.utils.np_vbo import VBuf, IBuf
-from pypuffersphere.utils.graphics_utils import make_unit_quad_tile
-import pypuffersphere.utils.transformations as tn
-from pypuffersphere.utils.graphics_utils import wall_clock
+from pyspheregl.utils.np_vbo import VBuf, IBuf
+from pyspheregl.utils.graphics_utils import make_unit_quad_tile
+import pyspheregl.utils.transformations as tn
+from pyspheregl.utils.graphics_utils import wall_clock
 
-from pypuffersphere.touch.rotater import RotationHandler
+from pyspheregl.touch.rotater import RotationHandler
 
 
 

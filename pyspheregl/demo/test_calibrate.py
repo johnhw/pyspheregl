@@ -1,7 +1,7 @@
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
-from pypuffersphere.touch.touch_calibration import Calibration
+from pyspheregl.touch.touch_calibration import Calibration
 
 if __name__=="__main__":
 

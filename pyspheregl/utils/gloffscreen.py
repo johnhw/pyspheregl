@@ -4,7 +4,7 @@ from ctypes import *
 import thread
 from pyglet.gl import *
 
-from pypuffersphere.utils import np_vbo, shader
+from pyspheregl.utils import np_vbo, shader
 class Texture:
     pass
 

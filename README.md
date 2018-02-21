@@ -1,4 +1,4 @@
-# pypuffersphere
+# pyspheregl
 Python/Pyglet code for using rendering on the PufferSphere
 
 Dependencies:
@@ -7,14 +7,14 @@ Dependencies:
 # Module launching
 
 ## Quick demo of simulator
-* `python -m pypuffersphere.demo.world --test`
+* `python -m pyspheregl.demo.world --test`
 
 * [Left click] rotate sphere
 * [SHIFT] lock sphere rotation
 * [Right click] simulate OSC message for touch
 
 ### **touch broadcast/monitor**
-`python -m pypuffersphere.sphere.touch_zmq monitor` 
+`python -m pyspheregl.sphere.touch_zmq monitor` 
 Will try to load `calibration.py` from the current directory as the calibration
 
     Broadcast on the ZMQ PUB stream on the given TCP port.
@@ -28,7 +28,7 @@ Will try to load `calibration.py` from the current directory as the calibration
 * `--console=False` Don't show the console view
 
 ### Calibration
-`python -m pypuffersphere.touch.calibrate`
+`python -m pyspheregl.touch.calibrate`
 
         usage: calibrate.py [-h] [--interleave] [--dummy] [--noprocess]
                                     [-n NTARGETS] [-r REPETITIONS] [-l MINLATITUDE]

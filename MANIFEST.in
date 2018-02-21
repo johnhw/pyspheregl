@@ -1,2 +1,2 @@
-include pypuffersphere/data/azworld.png
-recursive-include pypuffersphere/shaders *.vert *.frag *.gs
+include pyspheregl/data/azworld.png
+recursive-include pyspheregl/shaders *.vert *.frag *.gs
