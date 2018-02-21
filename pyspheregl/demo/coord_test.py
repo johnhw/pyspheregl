@@ -1,4 +1,4 @@
-from pyspheregl.sphere import sphere
+from ..sphere import sphere
 import numpy as np
 
 refs = {'npole':[0, np.pi/2], 'spole':[0,-np.pi/2], 'gmq':[0,0], 'wmq':[np.pi/2,0], 'emq':[-np.pi/2,0], 'rmq':[np.pi,0]}

@@ -1,9 +1,9 @@
 import numpy as np
 
 # sphere stuff
-import pyspheregl.sphere.sphere as sphere
-import pyspheregl.utils.transformations as tn
-from pyspheregl.utils.graphics_utils import wall_clock
+from ..sphere import sphere as sphere
+from ..utils import transformations as tn
+from ..utils.graphics_utils import wall_clock
 
 
 EQUATORIAL = 1  # rotate around z axis only

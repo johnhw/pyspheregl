@@ -4,8 +4,7 @@ import numpy as np
 import pickle
 import os, sys, time, random
 from sklearn import gaussian_process
-from pyspheregl.sphere import sphere
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
+from ..sphere import sphere
 
 def train_gp(calibration, alpha=1e-2):
     """Train a squared-exponential Gaussian process to predict offsets

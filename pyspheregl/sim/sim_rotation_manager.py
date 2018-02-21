@@ -2,7 +2,7 @@ import OSC
 import timeit
 wall_clock = timeit.default_timer
 
-from pyspheregl.sphere import sphere
+from ..sphere import sphere
 
 # manage rotation of the simulated sphere
 # and simulation of touches on this sphere via mouse presses

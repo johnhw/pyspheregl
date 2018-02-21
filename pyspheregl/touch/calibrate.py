@@ -6,11 +6,11 @@ from collections import defaultdict
 import random
 import time
 import os
-from pyspheregl.utils.np_vbo import IBuf, VBuf
-from pyspheregl.sphere import sphere
-import pyspheregl.sim.sphere_sim as sphere_sim
-from pyspheregl.sim.sphere_sim import getshader
-from pyspheregl.utils.shader import shader_from_file, ShaderVBO
+from ..utils.np_vbo import IBuf, VBuf
+from ..sphere import sphere
+from ..sim import sphere_sim as sphere_sim
+from ..sim.sphere_sim import getshader
+from ..utils.shader import shader_from_file, ShaderVBO
 import timeit
 # high precision timing
 wall_clock = timeit.default_timer

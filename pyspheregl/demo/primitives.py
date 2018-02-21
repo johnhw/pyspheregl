@@ -3,15 +3,15 @@ import pyglet
 from pyglet.gl import *
 
 # sphere stuff
-from pyspheregl.sim.sphere_sim import getshader, resource_file
-import pyspheregl.sim.sphere_sim as sphere_sim
-import pyspheregl.sphere.sphere as sphere
-from pyspheregl.utils.shader import ShaderVBO, shader_from_file
+from ..sim.sphere_sim import getshader, resource_file
+from  ..sim import sphere_sim
+from ..sphere import sphere
+from ..utils.shader import ShaderVBO, shader_from_file
 
 import time
-from pyspheregl.utils.np_vbo import VBuf, IBuf
-from pyspheregl.utils.graphics_utils import make_unit_quad_tile, make_circle_fan
-import pyspheregl.utils.transformations as tn
+from ..utils.np_vbo import VBuf, IBuf
+from ..utils.graphics_utils import make_unit_quad_tile, make_circle_fan
+from ..utils import transformations as tn
 
     
 

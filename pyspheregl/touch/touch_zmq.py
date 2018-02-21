@@ -4,11 +4,11 @@ import OSC
 from asciimatics.screen import Screen
 import fire
 import timeit
-import pyspheregl.sphere.sphere as sphere
+from ..sphere import sphere as sphere
 import numpy as np
 wall_clock = timeit.default_timer
 
-from pyspheregl.touch.touch_calibration import Calibration, CalibrationException
+from ..touch.touch_calibration import Calibration, CalibrationException
 
 # logger for debug messages, when handling socket comms
 import logging
