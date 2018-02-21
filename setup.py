@@ -25,6 +25,7 @@ setup(
     author = 'John Williamson',
     author_email = 'johnhw@gmail.com',
     url = 'https://github.com/johnhw/pyspheregl', 
+    download_url = 'https://github.com/johnhw/pyspheregl/archive/0.2.tar.gz', 
     keywords = ['pyspheregl', 'sphere', 'touch', 'spherical'], 
     classifiers = [],
 )
