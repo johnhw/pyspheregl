@@ -17,7 +17,7 @@ setup(
                         'attrs', 'scikit-learn', 'asciimatics', 'pyzmq'],
 
     # files 
-    ext_modules = cythonize([sphere_ext]),
+#    ext_modules = cythonize([sphere_ext]),
     include_package_data = True,
 
     # metadata
