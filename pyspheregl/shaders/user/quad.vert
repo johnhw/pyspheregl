@@ -16,10 +16,6 @@ uniform float scale=0.1;
 uniform int obj_type;
 uniform vec4 quat;
 
-vec3 quat_rotate_vertex(vec3 v, vec4 q)
-{ 
-  return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
-}
 
 void main()
 {   
@@ -32,7 +28,7 @@ void main()
     vec3 fwd = polar_to_cartesian(position.xy);
     
     fwd = quat_rotate_vertex(fwd, quat);
-    vec3 right = cross(fwd, pseudo_up);
+    vec3 right = normalize(cross(fwd, pseudo_up));
     //right = (rotationMatrix(fwd, position.w * 0) * vec4(right,1)).xyz;
     vec3 up = cross(fwd, right);
     

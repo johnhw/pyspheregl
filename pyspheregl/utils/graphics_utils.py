@@ -6,6 +6,45 @@ import timeit
 # high precision timing
 wall_clock = timeit.default_timer
 
+class SpriteSheet3D(object):
+    def __init__(self, w=1024, h=1024,  max_frames=16):
+        self.atlas = pyglet.image.atlas.Allocator(w, h)        
+        self.anim_texture = TextureStore3D(w,h,max_frames)
+        self.max_frames = max_frames
+        self.frame_map = {}
+        self.n_frames = {}
+
+    @property
+    def n_sprites(self):
+        return len(self.frame_map)
+
+    def add_frame(self, img, id, frame):
+        if frame>self.max_frames:
+            # discard excessive frames
+            print("Too many frames!") 
+            return
+        
+        self.n_frames[id] = max(frame,self.n_frames.get(id, 0))
+        w, h = img.shape[1], img.shape[0]
+        if id not in self.frame_map:
+            x, y = self.atlas.alloc(w,h)        
+            self.frame_map[id] = (x,y,w,h)
+        
+        x,y,w,h = self.frame_map[id]    
+        self.anim_texture.load_sub(img,x,y,w,h,frame)
+        
+    def get_texture(self):
+        return self.anim_texture
+        
+    def sprite_tex_coord(self, id):
+        # return the floating point texture coordinates
+        # for the top left and bottom right corners of the sprite
+        x,y,w,h = self.frame_map[id]
+        u1,v1 = x/float(self.atlas.width), y/float(self.atlas.height)
+        u2,v2 = (x+w)/float(self.atlas.width), (y+h)/float(self.atlas.height)
+        return u1,v1,u2,v2
+
+
 class ColorGradient(object):
     def __init__(self, color_array):
         """Create a color gradient from an array of RGB integer tuples"""
@@ -125,6 +164,12 @@ class TextureStore3D(object):
         else:
             glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, self.width, self.height, pages, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
             
+
+    def load_sub(self, img, x, y, w, h, slot):
+        if slot>=0 and slot<self.pages:
+            glBindTexture(GL_TEXTURE_2D_ARRAY, self.id) 
+            glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, x, y, slot, w, h, 1, GL_RGBA, GL_UNSIGNED_BYTE, img.ctypes.data)
+
     def load_slot(self, img, slot):
         if slot>=0 and slot<self.pages:
             glBindTexture(GL_TEXTURE_2D_ARRAY, self.id) 

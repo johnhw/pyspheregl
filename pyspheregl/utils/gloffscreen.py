@@ -17,7 +17,7 @@ class FBOContext:
         glGenTextures(1, self.fbo_texture)
         glGenFramebuffers(1, self.fbo_buffer)
         glBindFramebuffer(GL_FRAMEBUFFER, self.fbo_buffer) 
-
+        
         texture=True
         if texture:
             self.texture = Texture()
@@ -47,6 +47,11 @@ class FBOContext:
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
                                 GL_RENDERBUFFER, self.fbo_colorbuffer)
 
+        # create a render buffer for the touch target
+       
+        #glBindRenderbuffer(GL_RENDERBUFFER, fbo_colorbuffer)
+        #glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA, width, height)                
+        #glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_RENDERBUFFER, fbo_colorbuffer)
 
         # create a depth buffer (as a render buffefr) and attach it        
         glGenRenderbuffers(1, self.fbo_renderbuffer)
@@ -56,6 +61,7 @@ class FBOContext:
 
         # unbind the framebuffer/renderbuffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        glBindRenderbuffer(GL_RENDERBUFFER, 0)
         
         self.width = width
         self.height = height

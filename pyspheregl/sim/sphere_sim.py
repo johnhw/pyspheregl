@@ -99,30 +99,38 @@ class SphereViewer:
         self.world_render.draw(n_prims=0)
       
 
-    def __init__(self, sphere_resolution=1024, window_size=(800,600), exit_fn=None, simulate=True, auto_spin=False, draw_fn=None, 
+    def __init__(self,  product, exit_fn=None,  auto_spin=False, draw_fn=None, 
         tick_fn=None, debug_grid=0.1, test_render=False, show_touches=True,
         zmq_address="tcp://localhost:4000", touch_fn=None, simulate_touches = True):
-        self.simulate = simulate
+        
+        self.product = product
+        self.simulate = product["test_mode"]
         self.show_touches = show_touches
-        self.debug_grid = debug_grid # overlaid grid on sphere simulation
-        self.size = sphere_resolution
+        self.debug_grid = debug_grid # overlaid grid on sphere simulation        
         if not test_render:            
             self.draw_fn = draw_fn
         else:
-            self.draw_fn = self.test_render # simple test function to check rendering
-        
-        self.tick_fn = tick_fn        
-        self.window_size = window_size
+            self.draw_fn = self.test_render # simple test function to check rendering        
+        self.tick_fn = tick_fn                
         self.touch_fn = touch_fn
         self.exit_fn = exit_fn
         self.world_texture = pyglet.image.load(resource_file("data/azworld.png"))
         self.rotation_manager = RotationManager(auto_spin=auto_spin)
+        sphere_resolution = product["virtual_resolution"]
+        self.size = sphere_resolution
+        if self.simulate:
+            window_size = (800, 800)
+        else:
+            window_size = (product["width"], product["height"])
+
+        self.window_size = window_size
         self.skeleton = glskeleton.GLSkeleton(draw_fn = self.redraw, resize_fn = self.resize, 
                                               tick_fn=self.tick, mouse_fn=self.mouse, key_fn=self.key, exit_fn=self._exit, window_size=window_size)
 
         self.touch_manager = ZMQTouchHandler(zmq_address)
         self.simulate_touches = simulate_touches
 
+        
         if not self.simulate:
             cx = window_size[0] - sphere_resolution
             cy = window_size[1] - sphere_resolution                        
@@ -223,6 +231,7 @@ class SphereViewer:
         self.touch_line_render.draw()      
         self.touch_render.draw()
                         
+  
     def redraw(self):  
         
         glEnable(GL_BLEND)        
@@ -257,6 +266,7 @@ class SphereViewer:
             
             
             # render the image for the touch point look up
+            # this is colour map mapping each screen coordinate to a lat lon position
             touch_pos = self.rotation_manager.get_mouse_pos()
 
             if touch_pos:
@@ -279,13 +289,6 @@ def make_viewer(**kwargs):
     product = get_product(product=kwargs.get("product"), test_mode=kwargs.get("sim"))
     print("Using %s device" % product["product"])
     sim = product["test_mode"]
-
-    if sim:
-        s = SphereViewer(sphere_resolution=product["virtual_resolution"], window_size=(800, 800), simulate=True, **kwargs)
-        print("Simulating")
-    else:        
-        s = SphereViewer(sphere_resolution=product["virtual_resolution"], 
-        window_size=(product["width"],product["height"]), simulate=False, **kwargs)
-        print("Non-simulated")
+    s = SphereViewer(product=product, **kwargs)
     return s
 

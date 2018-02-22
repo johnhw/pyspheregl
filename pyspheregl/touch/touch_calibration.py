@@ -13,16 +13,13 @@ def train_gp(calibration, alpha=1e-2):
     
     Returns a GP object that performs the prediction."""
     unique_targets = calibration.copy()
-
     tx, ty, tz = sphere.spherical_to_cartesian((unique_targets["target_lon"], unique_targets["target_lat"]))
     x,y,z = sphere.spherical_to_cartesian((unique_targets["touch_lon"], 
                                             unique_targets["touch_lat"]))    
     target = np.vstack((x,y,z)).transpose()       
     residual = np.vstack((tx, ty, tz)).T
-    
     gp = gaussian_process.GaussianProcessRegressor(alpha=alpha)
     gp.fit(target, residual)
-   
     return gp
 
         
@@ -40,10 +37,6 @@ def augment_calibration(calibration):
     xs, ys = calibration["tuio_x"], calibration["tuio_y"]
     lonlat = np.array([sphere.tuio_to_polar(x,y) for x,y in zip(xs,ys)])    
     calibration["touch_lon"],calibration["touch_lat"] = lonlat[:,0], lonlat[:,1]
-
-    lons,lats = calibration["target_lon"], calibration["target_lat"]
-    xys = np.array([sphere.polar_to_tuio(lon,lat) for lon,lat in zip(lons,lats)])
-    calibration["target_x"],calibration["target_y"] = xys[:,0], xys[:,1]
 
     # fix angles
     calibration["target_lon"] = fix_angle(calibration["target_lon"])
@@ -132,7 +125,7 @@ class Calibration(object):
         if len(calibration)<5:
             raise CalibrationException("Less than 5 calibration targets; aborting...")
             
-        grouped = calibration.groupby(["target_x", "target_y"])
+        grouped = calibration.groupby(["target_lon", "target_lat"])
         self.unique = int(0.5+self.total_targets/float(len(grouped)))
         self.reps = len(grouped)
         print "%d unique targets identified; %d repeats per target" % (self.reps, self.unique)

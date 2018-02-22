@@ -9,6 +9,7 @@ import numpy as np
 wall_clock = timeit.default_timer
 
 from ..touch.touch_calibration import Calibration, CalibrationException
+from  ..sim.products import get_product
 
 # logger for debug messages, when handling socket comms
 import logging
@@ -82,6 +83,8 @@ class OSCMonitor:
 
         line = 0
 
+        
+
         # status line
         screen.print_at("MSG: %15s" % self.msg, 0, line, colour=screen.COLOUR_CYAN)
         screen.print_at("OSC: %10s:%5d" % (self.osc_ip, self.osc_port), 25, line, colour=screen.COLOUR_YELLOW)        
@@ -98,7 +101,7 @@ class OSCMonitor:
 
         else:
             screen.print_at("UNCALIBRATED", 0, 1, colour=screen.COLOUR_RED, bg=screen.COLOUR_BLACK)
-        line += 3
+        line += 2
 
         # print out the heartbeat status
         bg = screen.COLOUR_BLACK
@@ -111,6 +114,9 @@ class OSCMonitor:
             fg = screen.COLOUR_BLACK
             bg = screen.COLOUR_RED
         screen.print_at("HEART:%5.1f" % delta_t, 0,line, colour=fg, bg=bg)
+
+        screen.print_at("DEV: %s" % self.product["product"], 20,line, colour=screen.COLOUR_YELLOW, bg=screen.COLOUR_BLACK)
+
 
         # fseq and ntouches
         fseq_x = 44
@@ -241,16 +247,18 @@ class OSCMonitor:
             self.last_exception = str(err)
 
     
-    def monitor(self, port=3333, zmq_port=4000, ip="127.0.0.1", 
-        msg="/tuio/2Dcur", timeout=0.2, full_trace=False, console=True, 
+    def monitor(self, product=None, zmq_port=4000, timeout=0.2, full_trace=False, console=True, 
         no_calibration=False, calibration=None):
         """Listen to OSC messages on 3333. 
         Broadcast on the ZMQ PUB stream on the given TCP port."""        
         
-        self.monitor_enabled = console
-        self.msg = msg
-        self.osc_port = port
-        self.osc_ip = ip
+        # get the product to use, either from the command line
+        # or from the environment variable, or use the default product
+        product = get_product(product=product)
+        self.product = product
+        self.monitor_enabled = console        
+        self.osc_port = product["tuio_port"]
+        self.osc_ip = product["at_ip"]
         self.zmq_port = zmq_port
         self.timeout = timeout        
         self.full_trace = full_trace
@@ -258,7 +266,7 @@ class OSCMonitor:
 
         # try to import calibration
         # if not explicitly disabled with --no_calibration
-        self.min_latitude = -np.pi*0.25
+        self.min_latitude = -np.pi*0.45
         if not no_calibration:
             try:                
                 self.calibration = Calibration(calibration)
@@ -281,8 +289,9 @@ class OSCMonitor:
         self.zmq_socket.bind("tcp://*:%s" % zmq_port)
 
         # listen for OSC events
-        self.osc_server = OSC.OSCServer((ip, port))  
-        self.osc_server.addMsgHandler(msg, self._handler)   
+        self.msg = product["tuio_addr"]
+        self.osc_server = OSC.OSCServer((self.osc_ip, self.osc_port))  
+        self.osc_server.addMsgHandler(self.msg, self._handler)   
         self.osc_server.timeout = timeout
 
         # clear the touch status

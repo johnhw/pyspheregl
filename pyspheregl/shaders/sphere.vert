@@ -2,6 +2,10 @@
 #version 330 core
 #define version_set 330
 #define M_PI 3.1415926535897932384626433832795
+vec3 quat_rotate_vertex(vec3 v, vec4 q)
+{ 
+  return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+}
 
 vec2 az_to_polar(vec2 az)
 {
