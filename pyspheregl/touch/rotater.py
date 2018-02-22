@@ -58,7 +58,7 @@ class RotationHandler(object):
 
         # unnormalised accumulation of the rotations
         # normalised form is still used for intermediate computations
-        self.unnormalised_orientation +=  0.25 * spin * self.gain       
+        self.unnormalised_orientation +=  (1/40.0) * spin * self.gain       
         # apply damping
         damping = self.base_damping * self.finger_damping ** len(self.fingers)
         self.angular_velocity = damping * self.angular_velocity 

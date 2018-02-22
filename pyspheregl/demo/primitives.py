@@ -20,9 +20,10 @@ class Primitives(object):
         self.viewer = sphere_sim.make_viewer(show_touches=True, draw_fn=self.draw, touch_fn=self.touch)
 
 
-        refs = {'npole':[0.0, np.pi/2-0.0001], 'spole':[0,-np.pi/2], 'gmq':[0,0], 'wmq':[np.pi/2,0], 'emq':[-np.pi/2,0], 'rmq':[np.pi,0]}
+        refs = {'npole':[0.0, np.pi/2-0.0001], 'spole':[0,-np.pi/2+1e-2], 'gmq':[0,0], 'wmq':[np.pi/2,0], 'emq':[-np.pi/2,0], 'rmq':[np.pi,0], 'cm':[0, 0.25*np.pi],
+        'em':[-np.pi/2,0.125*np.pi], 'wm':[np.pi/2,0.125*np.pi],}
         colors = {'npole':[0,0,1,1], 'spole':[1,0,0,1], 'gmq':[0,1,0.5,1], 
-        'rmq':[0.5,0,1,1], 'emq':[1,1,0,1], 'wmq':[0,1,1,1]}
+        'rmq':[0.5,0,1,1], 'emq':[1,1,0,1], 'wmq':[0,1,1,1], 'cm':[0,1,0.5,1], 'em':[1,1,0,1], 'wm':[0,1,1,1]}
 
         ks = refs.keys()
         pts = np.array([refs[k] for k in ks], dtype=np.float32)
