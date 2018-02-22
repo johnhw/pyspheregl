@@ -1,7 +1,5 @@
 # pyspheregl
-Python/Pyglet code for using rendering on the PufferSphere
-
-**Note: this code is *not* endorsed by, or otherwise supported or developed by PufferFish, Ltd.**
+Python/Pyglet code for using rendering on spherical displays.
 
 Dependencies:
 
