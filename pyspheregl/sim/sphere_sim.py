@@ -99,7 +99,7 @@ class SphereViewer:
         self.world_render.draw(n_prims=0)
       
 
-    def __init__(self, sphere_resolution=1024, window_size=(800,600), background=None, exit_fn=None, simulate=True, auto_spin=False, draw_fn=None, 
+    def __init__(self, sphere_resolution=1024, window_size=(800,600), exit_fn=None, simulate=True, auto_spin=False, draw_fn=None, 
         tick_fn=None, debug_grid=0.1, test_render=False, show_touches=True,
         zmq_address="tcp://localhost:4000", touch_fn=None, simulate_touches = True):
         self.simulate = simulate
@@ -273,20 +273,19 @@ class SphereViewer:
 
         
     
-SPHERE_WIDTH = 2560
-SPHERE_HEIGHT = 1600
-SPHERE_SIZE = 1920 # estimated to compensate for the partial sphere coverage
+from .products import get_product
 
-def make_viewer(**kwargs):
-    sim = False
-    if "--test" in sys.argv:
-        sim = True
-    
+def make_viewer(**kwargs):    
+    product = get_product(product=kwargs.get("product"), test_mode=kwargs.get("sim"))
+    print("Using %s device" % product["product"])
+    sim = product["test_mode"]
+
     if sim:
-        s = SphereViewer(sphere_resolution=1600, window_size=(800, 800), background=None, simulate=True, **kwargs)
+        s = SphereViewer(sphere_resolution=product["virtual_resolution"], window_size=(800, 800), simulate=True, **kwargs)
         print("Simulating")
     else:        
-        s = SphereViewer(sphere_resolution=SPHERE_SIZE, window_size=(SPHERE_WIDTH,SPHERE_HEIGHT), background=None, simulate=False, **kwargs)
+        s = SphereViewer(sphere_resolution=product["virtual_resolution"], 
+        window_size=(product["width"],product["height"]), simulate=False, **kwargs)
         print("Non-simulated")
     return s
 
