@@ -181,3 +181,18 @@ are used to provide pixel perfect touch feedback.
 * Messages are received from /tuio/2Dcur, by default on port 3333
 * Valid messages are "ALIVE", "FSEQ" and "SET"
 * Coordinates are as "TUIO" coordinates above
+
+## Rendering
+* All rendering is to textures, which are eventually either mapped to a full screen quad (for real spherical display) or onto a simulated spherical geometry (for the simulator)
+* There are two color buffers: 
+    * COLOR_ATTACHMENT0 is a standard RGBA color buffer (the "color buffer")
+    * COLOR_ATTACHMENT1 is an integer, single channel buffer (GL_RED_INTEGER/GL32UI) which is used to store the ids of objects rendered on the screen. (the "touch buffer")
+
+* Shaders using touch feedback should have:
+
+    layout(location=0) out vec4 frag_color;
+    layout(location=1) out uint obj_id;
+
+* Locations 0 and 1 are bound to the respective framebuffers targets in sphere_sim automatically
+
+    

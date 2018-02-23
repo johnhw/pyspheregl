@@ -23,9 +23,16 @@ class Touch(object):
     active_touch =attr.ib(default=0)
     id = attr.ib(default=-1)
     alive = attr.ib(default=False)    
-    siblings = attr.ib(default=None)
+    parent = attr.ib(default=None)
     feedback = attr.ib(default=-1)
 
+
+# represents a collection of points within some tolerance
+@attr.s
+class Cluster(Touch):
+    radius = attr.ib(default=0)
+    children = attr.ib(default=None)    
+    
 
 def np_spherical_distance(p1, p2):
     """Given two points p1, p2 (in radians), return
@@ -42,12 +49,38 @@ def cluster_touches(touches, threshold):
     return np.nonzero(ixs)
     
 
+class ClusterSet(object):
+    def __init__(self, cluster_size):
+        self.clusters = []
+        self.cluster_map = {} # maps touch ids to clusters
+        self.cluster_size = cluster_size
+
+    def update(self, active_touches):
+        if len(active_touches)>0:
+            touches = []
+            for touch in active_touches:
+                touches.append(active_touches[touch].lonlat)            
+            tfrom, tto = cluster_touches(np.array(touches), self.cluster_size)
+
+
+    def update_connectivity(self, froms, tos, active_touches):
+        """Take a list of connected id pairs; update the connectivity of the
+           cluster set.
+           `pairs` should specify indices into active_touches, 
+           which should map those indices to Touch objects
+        """
+        for frm, to in zip(froms, tos):
+            frm_id = active_touches[frm].id
+            to_id = active_touches[to].id
+
+            
+
+
 # convert raw frame positions into a stream of events
 # either up, drag or down. Remembers origin of drags, and
 # tracks duration. Also provides a stable, dense numbering of active touches
-
 class TouchManager:
-    def __init__(self, linger_time=5.0, feedback_buf=None):
+    def __init__(self, linger_time=2.0, feedback_buf=None, cluster_size=0):
         self.touches = {}        
         self.feedback_buf = feedback_buf
         # stable, but low numbered slots
@@ -55,13 +88,9 @@ class TouchManager:
         self.graveyard = {}
         self.clusters = {}
         self.touch_linger_time = linger_time
+        self.cluster_set = ClusterSet(cluster_size)
 
-    def cluster_fingers(self):
-        touches = []
-        for touch in self.active_touches:
-            touches.append(self.active_touches[touch].lonlat)
-        tfrom, tto = cluster_touches(np.array(touches))
-
+    
     def feedback(self, lonlat):
         # using the feedback array, look up 
         # the object id underneath this touch point
@@ -81,7 +110,7 @@ class TouchManager:
         existing, this_frame = set(self.touches.keys()), set(frame_touches.keys())        
         down, move, up = this_frame-existing, this_frame&existing, existing-this_frame
 
-        #self.cluster_fingers()
+        self.cluster_set.update(self.active_touches)
 
         events = []
         for touch in down:
@@ -135,7 +164,7 @@ class TouchManager:
 # Listen to incoming ZMQ events and parse into
 # up/down/drag events 
 class ZMQTouchHandler:
-    def __init__(self, zmq_address, feedback_buf):
+    def __init__(self, zmq_address, feedback_buf, cluster_size=np.pi/8):
         self.active_touches = {}
         # create a zmq receiver and subscribe to touches
         context = zmq.Context()
@@ -143,7 +172,7 @@ class ZMQTouchHandler:
         socket.setsockopt(zmq.SUBSCRIBE, "TOUCH")
         socket.connect(zmq_address)
         self.socket = socket
-        self.manager = TouchManager(feedback_buf=feedback_buf)
+        self.manager = TouchManager(feedback_buf=feedback_buf, cluster_size=cluster_size)
         
         
         
