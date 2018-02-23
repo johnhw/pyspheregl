@@ -97,6 +97,23 @@ def polar_to_display(lon, lat, resolution=1200):
     w = resolution/2
     x,y = w + r * w * cos(lon), w - r*w*sin(lon)
     return x,y
+
+
+def normalize(x):
+    return x / np.sqrt(np.sum(x*x))
+
+def cart_to_az(x,y,z):    
+    l = np.sqrt(x*x+y*y+z*z)
+    l2 = np.sqrt(x*x+y*y)    
+    r = np.arccos(-z/l) / np.pi
+    return r*x/l2, -r*y/l2
+    
+
+
+
+def spherical_distance_cartesian(a, b):
+    """Returns the spherical distance between two unit normal vectors a, b"""
+    return np.arctan(np.linalg.norm(np.cross(a,b)) / np.dot(a,b))
     
 def polar_adjust_scale(lon, lat, s=1):    
     """Rescale lon, lat by contracting or expanding from the north pole. 

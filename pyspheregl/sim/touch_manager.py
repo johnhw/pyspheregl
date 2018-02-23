@@ -22,29 +22,52 @@ class Touch(object):
     active_touch =attr.ib(default=0)
     id = attr.ib(default=-1)
     alive = attr.ib(default=False)    
+    siblings = attr.ib(default=None)
 
+
+def np_spherical_distance(p1, p2):
+    """Given two points p1, p2 (in radians), return
+    the great circle distance between the two points."""
+    dlon = p2[0] - p1[0]        
+    lat1, lat2 = p1[1], p2[1]
+    return np.arccos(np.sin(lat1)*np.sin(lat2) + np.cos(lat1)*np.cos(lat2) * np.cos(dlon))
+    
+from scipy.spatial.distance import pdist, squareform
+
+def cluster_touches(touches, threshold):
+    distances = squareform(pdist(np.array(touches), np_spherical_distance))
+    ixs = np.tril(np.where(distances<threshold,1 ,0), -1)
+    return np.nonzero(ixs)
+    
 
 # convert raw frame positions into a stream of events
 # either up, drag or down. Remembers origin of drags, and
-# tracks duration. Also provides a stable numbering of active touches
+# tracks duration. Also provides a stable, dense numbering of active touches
 
 class TouchManager:
-    def __init__(self, min_latitude=-np.pi, linger_time=0.0):
+    def __init__(self, linger_time=0.0):
         self.touches = {}        
         # stable, but low numbered slots
         self.active_touches = {}     
         self.graveyard = {}
-        self.min_latitude = min_latitude
+        self.clusters = {}
         self.touch_linger_time = linger_time
+
+    def cluster_fingers(self):
+        touches = []
+        for touch in self.active_touches:
+            touches.append(self.active_touches[touch].lonlat)
+        tfrom, tto = cluster_touches(np.array(touches))
+
+
         
     def touch_frame(self, frame_touches, raw, fseq, t):
-
-        # filter out touches which are too low on the sphere
-        frame_touches = {id:pos for id,pos in frame_touches.items() if pos[1]>self.min_latitude}
 
         # a new complete frame is issued
         existing, this_frame = set(self.touches.keys()), set(frame_touches.keys())        
         down, move, up = this_frame-existing, this_frame&existing, existing-this_frame
+
+        #self.cluster_fingers()
 
         events = []
         for touch in down:
@@ -129,3 +152,8 @@ class ZMQTouchHandler:
                     touch_fn(events["events"])                    
                     
             waiting = self.socket.poll(zmq.NOBLOCK)
+
+
+if __name__=="__main__":
+    touches = [[0,0], [0.1,0], [-0.1, 0], [0,np.pi/4], [0, -np.pi/4], [-1,1], [-1.1, 1]]
+    print np.nonzero(cluster_touches(np.array(touches), 0.2))

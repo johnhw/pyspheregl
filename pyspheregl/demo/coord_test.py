@@ -11,6 +11,11 @@ for ref,(lon,lat) in refs.items():
     # verify reverse is OK
     assert(np.allclose([lon, lat], sphere.cart_to_polar(x,y,z)))
 
+    az_x, az_y = sphere.cart_to_az(x,y,z)
+
+    print "\t", "az_x %4.2f\taz_y %4.2f" % (az_x,az_y)
+
+
     az_x, az_y = sphere.polar_to_az(lon, lat)
     print "\t", "az_x %4.2f\taz_y %4.2f" % (az_x,az_y)
 
