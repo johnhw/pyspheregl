@@ -143,7 +143,7 @@ class ZMQTouchHandler:
         socket.setsockopt(zmq.SUBSCRIBE, "TOUCH")
         socket.connect(zmq_address)
         self.socket = socket
-        self.manager = TouchManager(feedback_buf = feedback_buf)
+        self.manager = TouchManager(feedback_buf=feedback_buf)
         
         
         

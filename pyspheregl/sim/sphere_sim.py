@@ -28,6 +28,14 @@ def mkshader(verts, frags, geoms=None):
     [getshader(c) for c in frags], 
     geoms=[getshader(c) for c in geoms])
 
+class TouchFeedback(object):
+        def __enter__(self):                
+            glColorMaski(1, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE) 
+            
+        def __exit__(self, a, b, c):
+            glColorMaski(1, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE) 
+  
+
 class SphereViewer:
 
     def get_whole_sphere_shader_vbo(self, shader):
@@ -243,10 +251,11 @@ class SphereViewer:
         self.touch_line_render.draw()      
         self.touch_render.draw()
                         
-  
+    
     def redraw(self):  
         # cap FPS at 60Hz
         if wall_clock() - self.last_frame_time<1.0/60.0:
+            time.sleep(0.001)
             return
         self.last_frame = wall_clock()
         glEnable(GL_BLEND)        
@@ -256,17 +265,28 @@ class SphereViewer:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         # enable point drawing for touch point        
+        glPixelStorei(GL_PACK_ALIGNMENT, 1)     
         glEnable(GL_LINE_SMOOTH)
         glEnable(GL_POINT_SPRITE)
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
 
         with self.fbo as f:         
+            # clear the touch buffer
+            
             # write layout 0 to the color buffer
             # write layout 1 to the touch feedback buffer
             bufs = (GLuint * 2)(GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1)                
             glDrawBuffers(2, bufs)            
-            if self.draw_fn is not None:       
+            # enable writing to the touch buffer
+            with TouchFeedback():
+                glClearColor(0.0, 0.0, 0.0, 0.0)
+                glClear(GL_COLOR_BUFFER_BIT)
+            
+            if self.draw_fn is not None:      
+                # enable writing to the touch buffer                
                 self.draw_fn()   
+
+                        
             if self.show_touches:                   
                 self.draw_touch_points()          
 
@@ -297,8 +317,9 @@ class SphereViewer:
 
         # retrieve the feedback buffer
         glBindTexture(self.fbo.touch_texture.target, self.fbo.touch_texture.id)
-        glGetTexImage(self.fbo.touch_texture.target, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, 
-        self.feedback_buf.ctypes.data)
+           
+        glGetTexImage(self.fbo.touch_texture.target, 0, GL_RED_INTEGER, 
+        GL_UNSIGNED_INT, self.feedback_buf.ctypes.data)        
         
             
 
