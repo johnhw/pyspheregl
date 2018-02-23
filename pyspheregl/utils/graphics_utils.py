@@ -27,7 +27,10 @@ class SpriteSheet3D(object):
         self.n_frames[id] = max(frame,self.n_frames.get(id, 0))
         w, h = img.shape[1], img.shape[0]
         if id not in self.frame_map:
-            x, y = self.atlas.alloc(w,h)        
+            # make sure we have texel border so that
+            # slicing up the atlas we don;t have bleed over
+            # hence the +2
+            x, y = self.atlas.alloc(w+2,h+2)        
             self.frame_map[id] = (x,y,w,h)
         
         x,y,w,h = self.frame_map[id]    

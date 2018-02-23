@@ -134,11 +134,12 @@ class SphereViewer:
         self.skeleton = glskeleton.GLSkeleton(draw_fn = self.redraw, resize_fn = self.resize, 
                                               tick_fn=self.tick, mouse_fn=self.mouse, key_fn=self.key, exit_fn=self._exit, window_size=window_size)
 
-        self.touch_manager = ZMQTouchHandler(zmq_address)
-        self.simulate_touches = simulate_touches
-
         # texture read back from the GPU representing touchable objects
         self.feedback_buf = np.zeros((self.size, self.size), dtype=np.uint32)
+        
+        self.touch_manager = ZMQTouchHandler(zmq_address, feedback_buf=self.feedback_buf)
+        self.simulate_touches = simulate_touches
+
         
         if not self.simulate:
             cx = window_size[0] - sphere_resolution
@@ -298,6 +299,7 @@ class SphereViewer:
         glBindTexture(self.fbo.touch_texture.target, self.fbo.touch_texture.id)
         glGetTexImage(self.fbo.touch_texture.target, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, 
         self.feedback_buf.ctypes.data)
+        
             
 
         
