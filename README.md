@@ -142,3 +142,42 @@ Will try to load `calibration.py` from the current directory as the calibration
 * minor axis runs north/south 
 * major axis runs east/west 
 * configurable portion of minor axis represented on spherical segment
+
+
+## Overall structure
+
+* sphere_sim provides spherical drawing context
+* make_viewer will construct a drawing context object
+* it takes callbacks to render content (`draw_fn`), update (`tick_fn`), receive touches (`touch_fn`)
+* the context runs in an pyglet event loop
+
+### Touch
+
+### From TUIO to ZMQ
+* Touch is received by the ZMQ rebroadcaster `touch_zmq`. 
+* The raw TUIO touch is converted to lon, lat format
+* Calibration is applied (if enabled) before the messages are sent over ZMQ on TCP port 4000, as PUB stream called "TOUCH"
+* `touch_zmq` shows the live touch status while running
+* The output over ZMQ is calibrated touch points, with low latitude touches filtered out
+    * Touches below the lowest target calibrated successfully are removed
+
+### Touch manager
+* Messages are received by the touch manager `touch_manager`
+* This takes the lon,lat positions of fingers and creates touch events: UP, DOWN, DRAG
+* These are passed to the sphere simulator to be passed to client code, using `touch_fn`
+* Touches are clustered to create cluster events for closely spaced fingers: `CLUSTER_UP`, `CLUSTER_DOWN`, `CLUSTER_DRAG`, `CLUSTER_LEAVE`, `CLUSTER_JOIN`
+
+
+### Feedback buffer
+* When rendering, if a shader writes integers to COLOR_ATTACHMENT1, then these values
+are used to provide pixel perfect touch feedback.
+* Shaders that want to use touch feedback need to have draw calls surrounded using `with sphere_sim.TouchFeedback()` to enable writing to the second color attachment
+* The results of writing to this color attachment are copied into a numpy array each frame
+    * This is done internally inside sphere_sim, which prepares an FBO for this process
+* The touch manager queries this numpy array and augments each incoming touch with the tag of the pixel underneath
+
+## Raw TUIO format
+* Touch is received over OSC in the TUIO format. 
+* Messages are received from /tuio/2Dcur, by default on port 3333
+* Valid messages are "ALIVE", "FSEQ" and "SET"
+* Coordinates are as "TUIO" coordinates above
