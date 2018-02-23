@@ -103,12 +103,11 @@ def normalize(x):
     return x / np.sqrt(np.sum(x*x))
 
 def cart_to_az(x,y,z):    
+    """Convert a Cartesian normal vector form directly to azimuthal coordinates"""
     l = np.sqrt(x*x+y*y+z*z)
     l2 = np.sqrt(x*x+y*y)    
     r = np.arccos(-z/l) / np.pi
     return r*x/l2, -r*y/l2
-    
-
 
 
 def spherical_distance_cartesian(a, b):

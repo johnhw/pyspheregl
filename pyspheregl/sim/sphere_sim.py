@@ -72,7 +72,13 @@ class SphereViewer:
         self.touch_pts = np.zeros((256, 3))        
         self.touch_buf = np_vbo.VBuf(self.touch_pts)
 
-        
+        # whols ecreen shader
+        quad_indices, quad_verts, _ = make_unit_quad_tile(1)            
+
+        screen_shader =mkshader(["sphere_sim/screen_quad.vert"], ["sphere_sim/screen_quad.frag"]) 
+        self.screen_render = shader.ShaderVBO(screen_shader, np_vbo.IBuf(quad_indices),
+            buffers={"position":np_vbo.VBuf(quad_verts)},
+            textures={"quadTexture":self.fbo.texture})
 
         touch_ibuf = np_vbo.IBuf(np.arange(len(self.touch_pts)))
         self.touch_render = shader.ShaderVBO(self.finger_point_shader, 
@@ -103,6 +109,7 @@ class SphereViewer:
         tick_fn=None, debug_grid=0.1, test_render=False, show_touches=True,
         zmq_address="tcp://localhost:4000", touch_fn=None, simulate_touches = True):
         
+    
         self.product = product
         self.simulate = product["test_mode"]
         self.show_touches = show_touches
@@ -130,13 +137,17 @@ class SphereViewer:
         self.touch_manager = ZMQTouchHandler(zmq_address)
         self.simulate_touches = simulate_touches
 
+        # texture read back from the GPU representing touchable objects
+        self.feedback_buf = np.zeros((self.size, self.size), dtype=np.uint32)
         
         if not self.simulate:
             cx = window_size[0] - sphere_resolution
             cy = window_size[1] - sphere_resolution                        
             glViewport(cx/2,0,sphere_resolution,sphere_resolution)
             self.simulate_touches = False
-        
+
+        # used for FPS limiting
+        self.last_frame_time = wall_clock()
         self.make_quad()
 
     def _exit(self):
@@ -233,7 +244,10 @@ class SphereViewer:
                         
   
     def redraw(self):  
-        
+        # cap FPS at 60Hz
+        if wall_clock() - self.last_frame_time<1.0/60.0:
+            return
+        self.last_frame = wall_clock()
         glEnable(GL_BLEND)        
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         # clear the screen
@@ -244,27 +258,23 @@ class SphereViewer:
         glEnable(GL_LINE_SMOOTH)
         glEnable(GL_POINT_SPRITE)
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
-                 
-        if not self.simulate:
-            if self.draw_fn is not None:
-                self.draw_fn()
-            if self.show_touches:
-                self.draw_touch_points()
-        else:
-            # draw onto the FBO texture
-            with self.fbo as f:         
-                if self.draw_fn is not None:       
-                    self.draw_fn()   
-                if self.show_touches:                   
-                    self.draw_touch_points()          
-                
 
+        with self.fbo as f:         
+            # write layout 0 to the color buffer
+            # write layout 1 to the touch feedback buffer
+            bufs = (GLuint * 2)(GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1)                
+            glDrawBuffers(2, bufs)            
+            if self.draw_fn is not None:       
+                self.draw_fn()   
+            if self.show_touches:                   
+                self.draw_touch_points()          
+
+        if self.simulate:
             # render onto the screen using the sphere distortion shader    
             rotate, tilt = self.rotation_manager.get_rotation()
             self.sphere_render.draw(vars={"rotate":np.radians(rotate),
                      "tilt":np.radians(tilt)})
-            
-            
+                        
             # render the image for the touch point look up
             # this is colour map mapping each screen coordinate to a lat lon position
             touch_pos = self.rotation_manager.get_mouse_pos()
@@ -280,6 +290,15 @@ class SphereViewer:
                     sphere_lon, sphere_lat =  ((pixel_data[0]/255.0)-0.5)*2*np.pi, ((pixel_data[1] / 255.0) -0.5) * np.pi,
                     # tell the touch manager where the touch is
                     self.rotation_manager.set_sphere_touch(sphere_lon, sphere_lat)
+        else:
+            # render onto a flat quad
+            self.screen_render.draw()
+
+        # retrieve the feedback buffer
+        glBindTexture(self.fbo.touch_texture.target, self.fbo.touch_texture.id)
+        glGetTexImage(self.fbo.touch_texture.target, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, 
+        self.feedback_buf.ctypes.data)
+            
 
         
     
