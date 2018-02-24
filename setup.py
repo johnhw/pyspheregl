@@ -21,7 +21,7 @@ setup(
     include_package_data = True,
 
     # metadata
-    description = 'Python/Pyglet code for rendering on the PufferSphere',
+    description = 'Python/Pyglet code for rendering on spherical displays',
     author = 'John Williamson',
     author_email = 'johnhw@gmail.com',
     url = 'https://github.com/johnhw/pyspheregl', 
