@@ -46,6 +46,9 @@ class GLSkeleton:
         if self.draw_fn:
             self.draw_fn()        
     def on_key_press(self, symbol, modifiers):
+        if symbol==pyglet.window.key.ESCAPE:
+            self.running = False
+
         if self.key_fn:
             self.key_fn("press", symbol, modifiers)
     
@@ -93,7 +96,8 @@ class GLSkeleton:
         self.running = False
         if self.exit_fn is not None:
             self.exit_fn()
-        pyglet.app.exit()
+        print("E")
+        #pyglet.app.exit()
         
 
     #frame loop. Called on every frame. all calculation shpuld be carried out here     
@@ -104,8 +108,22 @@ class GLSkeleton:
       
                                 
     #main loop. Just runs tick until the program exits     
+
+    def run(self):
+        while self.running:
+            event = self.window.dispatch_events()
+            pyglet.clock.tick()
+            self.tick(1/self.fps)
+            self.on_draw()
+            self.window.flip()
+            
+            #print(pyglet.clock.get_fps())
+
+
     def main_loop(self):
-        pyglet.clock.schedule_interval(self.tick, 1.0/self.fps)
-        pyglet.app.run()
+        pyglet.clock.set_fps_limit(self.fps)
+        #pyglet.clock.schedule_interval(self.tick, 1.0/self.fps)
+        #pyglet.app.run()
+        self.run()
          
      

@@ -624,12 +624,15 @@ class ShaderVBO:
 
         if textures is None:
             textures = self.textures
+            
         else:
             # or remap them here
-            textures = {}
-            for ix,(tex_name,tex) in enumerate(textures.items()):
-                s.uniformi(tex_name, ix) 
-                textures[ix] = tex
+            ntextures = {}
+            with self.shader as s:
+                for ix,(tex_name,tex) in enumerate(textures.items()):                
+                    s.uniformi(tex_name, ix) 
+                    ntextures[ix] = tex
+            textures = ntextures
 
         self.shader.draw(vao=self.vao, ibo=self.ibo, textures=textures, vars=vars, n_prims=n_prims, primitives=self.primitives)
         
