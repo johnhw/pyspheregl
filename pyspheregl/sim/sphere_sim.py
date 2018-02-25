@@ -252,11 +252,7 @@ class SphereViewer:
         self.touch_render.draw()
                         
     
-    def redraw(self):  
-        # cap FPS at 60Hz
-        if wall_clock() - self.last_frame_time<1.0/60.0:
-            time.sleep(0.001)
-            return
+    def redraw(self):          
         self.last_frame = wall_clock()
         glEnable(GL_BLEND)        
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
