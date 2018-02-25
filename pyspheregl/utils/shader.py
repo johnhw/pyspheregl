@@ -318,7 +318,6 @@ class Shader:
         # note that the type must be right here!        
         for var, value in vars.items():
             self.__setitem__(var, value)
-            
         np_vbo.draw_vao(vao, ibo, primitives=primitives,  n_vtxs=ibo.shape[0], n_prims=n_prims)
                 
         self.unbind()
