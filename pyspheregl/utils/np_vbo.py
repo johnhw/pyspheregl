@@ -52,9 +52,9 @@ def draw_vao(vao, ibo=None, primitives=GL_QUADS,  n_vtxs=0, n_prims=0):
     else:
         ibo.bind()
         if n_prims==0:
-            glDrawElements(primitives, n_vtxs, GL_UNSIGNED_INT, 0)
+            glDrawElements(primitives, n_vtxs, GL_UNSIGNED_INT, 0)            
         else:
-            glDrawElementsInstanced(primitives, n_vtxs, GL_UNSIGNED_INT, 0, n_prims)
+            glDrawElementsInstanced(primitives, n_vtxs, GL_UNSIGNED_INT, 0, n_prims)            
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
     glBindVertexArray(0)
 
