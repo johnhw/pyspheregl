@@ -19,7 +19,7 @@ class VBuf:
 
 
 
-def create_vao(vbufs):
+def create_vao(vbufs, ibo):
     """
         Takes a list of VBufs, and generates
         the VAO which attaches all of them and returns it.
@@ -36,26 +36,23 @@ def create_vao(vbufs):
         if vbuf.divisor!=-1:
             glVertexAttribDivisor(vbuf.id, vbuf.divisor)
 
+    if ibo!=None:
+        glBindBuffer(ibo.target, ibo.id)
+        
+
     # unbind all buffers
     glBindVertexArray(0)
     glBindBuffer(GL_ARRAY_BUFFER, 0)               
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+    
     return vao
 
-def draw_vao(vao, ibo=None, primitives=GL_QUADS,  n_vtxs=0, n_prims=0):
+def draw_vao(vao, primitives=GL_QUADS,  n_vtxs=0, n_prims=0):
     glBindVertexArray(vao)
-    if ibo is None:
-        if nprims==0:
-            glDrawArrays(primitives, 0, n_vtxs)
-        else:
-            glDrawArraysInstanced(primitives, 0, n_vtxs, n_prims)
+    if n_prims==0:
+        glDrawElements(primitives, n_vtxs, GL_UNSIGNED_INT, 0)            
     else:
-        ibo.bind()
-        if n_prims==0:
-            glDrawElements(primitives, n_vtxs, GL_UNSIGNED_INT, 0)            
-        else:
-            glDrawElementsInstanced(primitives, n_vtxs, GL_UNSIGNED_INT, 0, n_prims)            
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+        glDrawElementsInstanced(primitives, n_vtxs, GL_UNSIGNED_INT, 0, n_prims)            
     glBindVertexArray(0)
 
 

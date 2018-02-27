@@ -16,7 +16,7 @@ from ..sim.touch_manager import ZMQTouchHandler
 
 def resource_file(fname):
     dir_path = os.path.dirname(os.path.realpath(__file__))        
-    return os.path.join(dir_path, "..", fname)
+    return os.path.normpath(os.path.join(dir_path, "..", fname))
 
 def getshader(f):
     return resource_file(os.path.join("shaders", f))
