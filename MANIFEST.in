@@ -1,2 +1,3 @@
 include pyspheregl/data/azworld.png
+include pysphergl/data/cities1000.zip
 recursive-include pyspheregl/shaders *.vert *.frag *.gs

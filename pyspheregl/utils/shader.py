@@ -293,9 +293,11 @@ class Shader:
 
 
     def attribute_location(self, name):
+        # cache attribute locations
+        
         if name not in self.attribs:
             self.attribs[name] = glGetAttribLocation(self.handle, name)
-        
+        print(name, self.attribs[name], glGetAttribLocation(self.handle, name))
         return self.attribs[name]
         
 
@@ -314,18 +316,22 @@ class Shader:
                 raise GLSLError("Could not find attribute %s in shader" % name)            
             glDisableVertexAttribArray(id)
             self.attribf(id, attrib)                   
-        # set uniforms
 
+        # set uniforms
         # note that the type must be right here!        
         for var, value in vars.items():
             self.__setitem__(var, value)
-            
-        np_vbo.draw_vao(vao, primitives=primitives,  n_vtxs=n_vtxs, n_prims=n_prims)
+
+        # execute the vao draw call
+        glBindVertexArray(vao)
+        if n_prims==0:
+            glDrawElements(primitives, n_vtxs, GL_UNSIGNED_INT, 0)            
+        else:
+            glDrawElementsInstanced(primitives, n_vtxs, GL_UNSIGNED_INT, 0, n_prims)            
+        glBindVertexArray(0)
                 
         self.unbind()
 
-    #def setv(self, **kwargs):
-    #    for k,v in kwargs.items():
 
     
     @property

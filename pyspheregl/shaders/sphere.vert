@@ -109,3 +109,35 @@ mat4 rotationMatrix(vec3 axis, float angle)
 
                 
 }
+
+// sphere conversion code
+// projects flat polygons onto the sphere, at a given position, with a given up vector
+// with a quaternion rotation (optional)
+vec3 planar_sphere_transform(vec3 position, vec3 up_vector, vec2 vertex, vec4 quat)
+{
+    vec3 pseudo_up = normalize(up_vector);
+    vec3 fwd = normalize(position);    
+    fwd = quat_rotate_vertex(fwd, quat);
+    vec3 right = normalize(cross(fwd, pseudo_up));
+    vec3 up = normalize(cross(fwd, right));
+    vec3 pos_3d = vertex.x * right + vertex.y * up  + fwd;
+    vec3 az = cartesian_to_azimuthal(pos_3d);    
+    return az;
+}
+
+vec3 planar_sphere_transform(vec3 position, vec3 up_vector, vec2 vertex)
+{
+    vec3 pseudo_up = normalize(up_vector);
+    vec3 fwd = position;
+    vec3 right = normalize(cross(fwd, pseudo_up));
+    vec3 up = cross(fwd, right);
+    vec3 pos_3d = vertex.x * right + vertex.y * up  + fwd;
+    vec3 az = cartesian_to_azimuthal(pos_3d);
+    return az;
+}
+
+uniform int obj_type;
+
+#define TOUCH_ID ((obj_type << 16) + gl_InstanceID)
+
+

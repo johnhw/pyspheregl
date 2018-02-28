@@ -69,8 +69,9 @@ class ShaderVBO:
         """Change the named texture to the given texture ID"""
         self.textures[self.tex_names[name]] = texture
 
-    def draw(self, vars=None, n_prims=0, textures=None, primitives=None):
+    def draw(self, vars=None, n_prims=0, textures=None, primitives=None, attribs=None):
         vars = vars or {}
+        attribs = attribs or {}
 
         primitives = primitives or self.primitives
         # either use the default textures
@@ -88,7 +89,7 @@ class ShaderVBO:
             textures = ntextures
 
         self.shader.draw(vao=self.vao, textures=textures, 
-                        vars=vars, n_prims=n_prims, primitives=self.primitives, 
+                        vars=vars, n_prims=n_prims, primitives=self.primitives, attribs=attribs,
                         n_vtxs=self.n_vtxs)
         
   

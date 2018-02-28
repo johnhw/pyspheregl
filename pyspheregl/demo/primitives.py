@@ -64,9 +64,9 @@ class Primitives(object):
         self.quad_vbo = ShaderVBO(quad_shader, IBuf(ixs), 
                             buffers={"quad_vtx": VBuf(quad, divisor=0),
                                     "position":VBuf(pts, divisor=1)}, 
-                            attribs={"fcolor":(0.5, 1.0, 0.2, 0.25),
+                            attribs={"fcolor":(0.5, 1.0, 0.2, 1.0),
                                     "up_vector":(0.0,0.0,1.0)},
-                            vars={"scale":0.5})
+                            vars={"scale":0.1}, primitives=GL_QUADS)
 
         
         # simple circle shader    
@@ -77,7 +77,7 @@ class Primitives(object):
                             buffers={"quad_vtx": VBuf(circle_verts, divisor=0),
                                     "position":VBuf(pts, divisor=1)}, 
                             attribs={"fcolor":(0.5, 1.0, 0.2, 0.25)},
-                            vars={"scale":0.5}, primitives=GL_TRIANGLE_FAN)
+                            vars={"scale":0.1}, primitives=GL_TRIANGLE_FAN)
 
 
 
