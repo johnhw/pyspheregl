@@ -110,7 +110,7 @@ class TouchManager:
         existing, this_frame = set(self.touches.keys()), set(frame_touches.keys())        
         down, move, up = this_frame-existing, this_frame&existing, existing-this_frame
 
-        self.cluster_set.update(self.active_touches)
+        #self.cluster_set.update(self.active_touches)
 
         events = []
         for touch in down:
@@ -179,27 +179,27 @@ class ZMQTouchHandler:
     def tick(self, touch_fn=None):
         # receive any waiting touch events, and dispatch 
         # to the touch handling function
-        waiting = self.socket.poll(zmq.NOBLOCK)
+        waiting = self.socket.poll(timeout=0)
         while waiting != 0:
-            parts = self.socket.recv_multipart(zmq.NOBLOCK)       
-            if len(parts)==2:
-                json_data = parts[-1]
-                touch_data = json.loads(json_data)                
-                
-                # construct events
-                events = self.manager.touch_frame(touch_data["touches"], 
-                                                touch_data["raw"],
-                                                fseq=touch_data["fseq"],
-                                                t = touch_data["t"])
-                # take a copy of the touches
-                self.active_touches = self.manager.active_touches
-                
-                # call the callback
-
-                if touch_fn is not None and len(events["events"])>0:
-                    touch_fn(events["events"])                    
+            if waiting != 0:
+                parts = self.socket.recv_multipart(zmq.NOBLOCK)       
+                if len(parts)==2:
+                    json_data = parts[-1]
+                    touch_data = json.loads(json_data)                
                     
-            waiting = self.socket.poll(zmq.NOBLOCK)
+                    # construct events
+                    events = self.manager.touch_frame(touch_data["touches"], 
+                                                    touch_data["raw"],
+                                                    fseq=touch_data["fseq"],
+                                                    t = touch_data["t"])
+                    # take a copy of the touches
+                    self.active_touches = self.manager.active_touches
+                    
+                    # call the callback
+                    if touch_fn is not None and len(events["events"])>0:
+                        touch_fn(events["events"])                    
+                        
+            waiting = self.socket.poll(timeout=0)
 
 
 if __name__=="__main__":

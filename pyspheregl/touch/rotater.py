@@ -46,7 +46,7 @@ class RotationHandler(object):
         self.fingers = {}
         self.unnormalised_orientation = np.array(self.orientation)
 
-    def update(self):
+    def update(self, dt):
         self.orientation = tn.unit_vector(self.orientation)
 
         # force rotations to around equator only
@@ -54,11 +54,11 @@ class RotationHandler(object):
             self.angular_velocity[2:] = 0
 
         spin = tn.quaternion_multiply(self.angular_velocity, self.orientation)
-        self.orientation += (1/40.0) * spin * self.gain       
+        self.orientation +=  dt * spin * self.gain       
 
         # unnormalised accumulation of the rotations
         # normalised form is still used for intermediate computations
-        self.unnormalised_orientation +=  (1/40.0) * spin * self.gain       
+        self.unnormalised_orientation +=  dt * spin * self.gain       
         # apply damping
         damping = self.base_damping * self.finger_damping ** len(self.fingers)
         self.angular_velocity = damping * self.angular_velocity 

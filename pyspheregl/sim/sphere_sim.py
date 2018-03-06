@@ -114,7 +114,7 @@ class SphereViewer:
       
 
     def __init__(self,  product, exit_fn=None,  auto_spin=False, draw_fn=None, 
-        tick_fn=None, debug_grid=0.1, test_render=False, show_touches=True,
+        tick_fn=None, debug_grid=0.1, test_render=False, show_touches=True, key_fn=None, mouse_fn=None,
         zmq_address="tcp://localhost:4000", touch_fn=None, simulate_touches = True):
         
     
@@ -127,6 +127,8 @@ class SphereViewer:
         else:
             self.draw_fn = self.test_render # simple test function to check rendering        
         self.tick_fn = tick_fn                
+        self.key_fn = key_fn
+        self.mouse_fn = mouse_fn
         self.touch_fn = touch_fn
         self.exit_fn = exit_fn
         self.world_texture = pyglet.image.load(resource_file("data/azworld.png"))
@@ -201,6 +203,9 @@ class SphereViewer:
                     self.rotation_manager.touch_drag(x,y)
                 if event=="release":
                     self.rotation_manager.touch_release(x,y)
+
+        if self.mouse_fn is not None:
+            self.mouse_fn(event, x, y, dx, dy, buttons, modifiers, **kwargs)
                 
                 
     def key(self, event, symbol, modifiers):
@@ -209,8 +214,10 @@ class SphereViewer:
         if event=='release' and symbol==pyglet.window.key.LSHIFT:
             self.rotation_manager.unlock_rotation()        
         if symbol==pyglet.window.key.ESCAPE:       
-            self.exit()     
-                        
+            self.exit() 
+    
+        if self.key_fn is not None:
+            self.key_fn(event, symbol, modifiers)                
     
     def tick(self):        
         if self.tick_fn:

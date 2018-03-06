@@ -161,10 +161,6 @@ class Shader:
         
            
             
-            
-    
-        
-
     def link(self):
         # link the program
         glLinkProgram(self.handle)
@@ -294,10 +290,9 @@ class Shader:
 
     def attribute_location(self, name):
         # cache attribute locations
-        
         if name not in self.attribs:
             self.attribs[name] = glGetAttribLocation(self.handle, name)
-        print(name, self.attribs[name], glGetAttribLocation(self.handle, name))
+        
         return self.attribs[name]
         
 

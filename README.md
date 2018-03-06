@@ -14,7 +14,9 @@ Dependencies:
 * [Right click] simulate OSC message for touch
 
 ### **touch broadcast/monitor**
-`python -m pyspheregl.sphere.touch_zmq monitor` 
+
+        python -m pyspheregl.touch.touch_zmq monitor --full_trace
+
 Will try to load `calibration.py` from the current directory as the calibration
 
     Broadcast on the ZMQ PUB stream on the given TCP port.

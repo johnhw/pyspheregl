@@ -33,6 +33,10 @@ class GLSkeleton:
         self.w, self.h = self.window.width, self.window.height
         
         print("OpenGL version %s %s" %(pyglet.gl.gl_info.get_version(), pyglet.gl.gl_info.get_vendor()))
+        print("       renderer %s " %(pyglet.gl.gl_info.get_renderer()))
+        # quite a long list!
+        #print("       extensions:\n\t\t%s " %("\n\t\t".join(pyglet.gl.gl_info.get_extensions())))
+        
         print("Resolution: %d x %d" % (self.window.width, self.window.height))
                 
         
@@ -79,11 +83,14 @@ class GLSkeleton:
     
         
     # init routine, sets up the engine, then enters the main loop
-    def __init__(self, draw_fn = None, tick_fn = None, event_fn = None, key_fn=None, resize_fn = None, mouse_fn = None, exit_fn=None, window_size=(800,600), fullscreen=False):    
+    def __init__(self, draw_fn = None, tick_fn = None, event_fn = None, key_fn=None, resize_fn = None, mouse_fn = None, exit_fn=None, window_size=(800,600), debug=True, fullscreen=False):    
         #self.init_pygame(window_size[0], window_size[1], fullscreen)
+        if not debug:
+            # faster, but unsafe operation
+            pyglet.options['debug_gl'] = False
         self.init_pyglet(window_size)
         self.fps = 60
-        
+        self.debug = debug
         self.resize_fn = resize_fn
         self.draw_fn = draw_fn
         self.tick_fn = tick_fn        
@@ -119,6 +126,7 @@ class GLSkeleton:
             self.on_draw()
             self.window.flip()
             self.actual_fps = pyglet.clock.get_fps()
+            print(self.actual_fps)
             
 
 
