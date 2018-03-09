@@ -126,7 +126,6 @@ class GLSkeleton:
             self.on_draw()
             self.window.flip()
             self.actual_fps = pyglet.clock.get_fps()
-            print(self.actual_fps)
             
 
 
