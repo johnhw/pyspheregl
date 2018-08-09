@@ -1,5 +1,6 @@
 from pyglet.gl import *
 from ctypes import *
+from shader import GLSLError
 import contextlib
 import numpy as np
 import np_vbo
