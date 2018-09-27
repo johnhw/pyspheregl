@@ -54,7 +54,7 @@ class RotationTest(object):
         self.point_vbo.draw(vars={"quat":self.rotater.orientation})
 
     def tick(self):        
-        self.rotater.update()
+        self.rotater.update(1/60.0)
         pass
         
                         
