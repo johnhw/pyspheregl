@@ -30,6 +30,7 @@ Will try to load `calibration.py` from the current directory as the calibration
 * `--console=False` Don't show the console view
 
 ### Calibration
+TODO: Add note on calibration process (see John email)
 `python -m pyspheregl.touch.calibrate`
 
         usage: calibrate.py [-h] [--interleave] [--dummy] [--noprocess]
