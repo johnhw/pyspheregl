@@ -60,6 +60,14 @@ class ShaderVBO:
                 self.__setitem__(var, value)
         self.shader.unbind()
 
+    def set_attrib(self, name, attrib):
+        id = self.shader.attribute_location(name)  
+        if id<0:
+                raise GLSLError("Could not find attribute %s in shader" % name)                        
+        
+        glDisableVertexAttribArray(id)
+        self.shader.attribf(id, attrib) 
+
     def __setitem__(self, var, value):
         """Override setting uniforms so that they actually write to the shader,
         as if they were just ordinary variables"""
