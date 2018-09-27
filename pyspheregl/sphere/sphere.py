@@ -90,7 +90,26 @@ def spiral_layout(n, C=3.6):
         phis.append(phi-np.pi/2)
         thetas.append(theta)        
     return list(zip(thetas, phis))
-    
+
+def lat_ring(lon, n):
+    """Return a ring of N points around the lat for a specified input lon (input in degrees)"""
+    inc = 360 / float(n)
+    rtn_list = []    
+    i = 0
+    while i < 360:
+        rtn_list = rtn_list + [[np.radians(i), np.radians(lon)]]
+        i += inc
+    return rtn_list
+
+def lon_ring(lat, n):
+    """Return a ring of N points around the lon for a specified input lat (input in degrees)"""
+    inc = 360 / float(n)
+    rtn_list = []    
+    i = 0
+    while i < 360:
+        rtn_list = rtn_list + [[np.radians(lat), np.radians(i)]]
+        i += inc
+    return rtn_list
 
 def polar_to_display(lon, lat, resolution=1200):
     """polar_to_display takes a lon,lat pair and returns an onscreen x,y co-ordinates

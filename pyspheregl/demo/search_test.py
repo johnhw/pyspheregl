@@ -27,7 +27,7 @@ class SearchTest(object):
     time_within_ring = 3                                                            # Number of seconds to align dot within ring
 
     align_n = 31                                                                    # Dot position to display task dot    
-    target_pt = np.array([[np.radians(180), np.radians(0)]], dtype=np.float)       # Position of target on sphere
+    target_pt = np.array([[np.radians(180), np.radians(0)]], dtype=np.float)        # Position of target on sphere
 
     reset = False
     touched_point = False
@@ -62,7 +62,8 @@ class SearchTest(object):
         self.background_colour = (1.0, 1.0, 1.0, 1.0)
 
         # Generate random point
-        self.pts = np.array(sphere.spiral_layout(256))    
+        self.pts = np.array(sphere.spiral_layout(256))           
+
         self.align_n = self.generate_random_dot_pt()               
         self.align_pts = self.pts[self.align_n : self.align_n + 1, :]
 
