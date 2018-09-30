@@ -30,6 +30,8 @@ Will try to load `calibration.py` from the current directory as the calibration
 * `--console=False` Don't show the console view
 
 ### Calibration
+To run the calibration process you must first run `touch_zmq.py` with `--no_calibration` and then run the calibration using `calibrate.py`. Once complete you must then restart `touch_zmq` for the calibration to take effect.
+
 `python -m pyspheregl.touch.calibrate`
 
         usage: calibrate.py [-h] [--interleave] [--dummy] [--noprocess]

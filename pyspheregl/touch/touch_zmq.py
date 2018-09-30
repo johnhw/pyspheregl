@@ -34,6 +34,8 @@ XXxx++--..
 
 class OSCMonitor:
     
+    inverted_y = False
+
     def render_sphere(self, screen, touch_list):
         touches = sorted(touch_list.keys())
         sphere_1x = 44
@@ -204,7 +206,13 @@ class OSCMonitor:
             if data[0]=='set':
                 touch_id, x, y = data[1:4]
                 lon, lat = self.convert_touch(x, y)
-                self.touch_list[touch_id] = lon, lat
+
+                # quick check solution strange inverted y hardware bug
+                if self.inverted_y:
+                    self.touch_list[touch_id] = lon, -lat
+                else:
+                    self.touch_list[touch_id] = lon, lat
+                
                 self.raw_list[touch_id] = x, y
                 self.raws[touch_id] = x,y
              

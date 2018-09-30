@@ -1,5 +1,12 @@
 from math import *
 import numpy as np
+from pyspheregl.utils.transformations import quaternion_matrix
+
+def rotate_cartesian(q, v):
+    """Rotate a point in Cartesian coordinates by the given quaternion,
+    returning a new point in Cartesian space."""    
+    return v + 2.0 * np.cross(q[0:3], np.cross(q[0:3], v) + q[3]*v)
+    
 
 def tuio_to_display(tuio_x, tuio_y, resolution=1200):
     """tuio_to_polar takes an x/y coordinate given in TUIO format (values 0 to 1)
@@ -83,7 +90,26 @@ def spiral_layout(n, C=3.6):
         phis.append(phi-np.pi/2)
         thetas.append(theta)        
     return list(zip(thetas, phis))
- 
+
+def lat_ring(lon, n):
+    """Return a ring of N points around the lat for a specified input lon (input in degrees)"""
+    inc = 360 / float(n)
+    rtn_list = []    
+    i = 0
+    while i < 360:
+        rtn_list = rtn_list + [[np.radians(i), np.radians(lon)]]
+        i += inc
+    return rtn_list
+
+def lon_ring(lat, n):
+    """Return a ring of N points around the lon for a specified input lat (input in degrees)"""
+    inc = 360 / float(n)
+    rtn_list = []    
+    i = 0
+    while i < 360:
+        rtn_list = rtn_list + [[np.radians(lat), np.radians(i)]]
+        i += inc
+    return rtn_list
 
 def polar_to_display(lon, lat, resolution=1200):
     """polar_to_display takes a lon,lat pair and returns an onscreen x,y co-ordinates
@@ -371,9 +397,10 @@ def spherical_to_cartesian(pt):
     st = np.sin(lat)
     x = np.cos(lon) * st
     y = np.sin(lon) * st
-    z = np.cos(lat)
-    
+    z = -np.cos(lat) # to match shader    
     return x,y,z
+
+
 
 def polar_to_cart(lon, lat):
     lat += np.pi/2
@@ -385,6 +412,15 @@ def polar_to_cart(lon, lat):
     
     return x,y,z
 
+def polar_to_cart2(lon, lat):
+    # lat -= np.pi/2
+    st = np.sin(lat)
+    
+    x = np.cos(lon) * st
+    y = np.sin(lon) * st
+    z = np.cos(lat)
+
+    return x,y,z
     
 def cartesian_to_spherical(pt):
     """Convert a Cartesian 3D point to lon, lat co-ordinates of the projection

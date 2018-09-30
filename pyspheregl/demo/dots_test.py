@@ -6,28 +6,29 @@ from pyglet.gl import *
 from ..sim.sphere_sim import getshader, resource_file
 from  ..sim import sphere_sim
 from ..sphere import sphere
+from ..utils.graphics_utils import make_unit_quad_tile
 from ..utils.shader import ShaderVBO, shader_from_file
 from ..utils.np_vbo import VBuf, IBuf
 from ..utils import transformations as tn
 
 from ..touch.rotater import RotationHandler
+from ..touch import rotater   
 
-
-
-class RotationTest(object):
+class DotsTest(object):
     def __init__(self):
         self.viewer = sphere_sim.make_viewer(show_touches=True, draw_fn=self.draw, 
         tick_fn=self.tick,
         touch_fn=self.touch)
         self.rotater = RotationHandler()                
 
-        pts = np.array(sphere.spiral_layout(256))
+        self.pts = sphere.lon_ring(0, 200) + sphere.lon_ring(30, 200) + sphere.lon_ring(-30, 200) + sphere.lon_ring(90, 200) + sphere.lon_ring(60, 200) + sphere.lon_ring(-60, 200)
+        self.pts += sphere.lat_ring(0, 200) + sphere.lat_ring(30, 200) + sphere.lat_ring(-30, 200) + sphere.lat_ring(90, 200) + sphere.lat_ring(60, 200) + sphere.lat_ring(-60, 200)
+        self.pts = np.array(self.pts, dtype=float)
         
-        # point shader; simple coloured circles, with no spherical correction
         point_shader = shader_from_file([getshader("sphere.vert"), getshader("user/point.vert")], [getshader("user/point.frag")])
-        self.point_vbo = ShaderVBO(point_shader, IBuf(np.arange(len(pts))), 
-                                    buffers={"position":VBuf(pts), },
-                                    vars={"constant_size":10.0,                                    
+        self.point_vbo = ShaderVBO(point_shader, IBuf(np.arange(len(self.pts))), 
+                                    buffers={"position":VBuf(self.pts), },
+                                    vars={"constant_size":10,                                    
                                     }, 
                                     attribs={"color":(1,1,1,1)},
                                     primitives=GL_POINTS)
@@ -50,7 +51,6 @@ class RotationTest(object):
         glClear(GL_COLOR_BUFFER_BIT)
         glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
         glEnable(GL_POINT_SPRITE)
-        
         self.point_vbo.draw(vars={"quat":self.rotater.orientation})
 
     def tick(self):        
@@ -61,7 +61,7 @@ class RotationTest(object):
 
               
 if __name__=="__main__":
-    p = RotationTest()
+    p = DotsTest()
     
     
    

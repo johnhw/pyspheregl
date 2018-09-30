@@ -12,26 +12,25 @@ from ..utils import transformations as tn
 
 from ..touch.rotater import RotationHandler
 
+from ..utils.graphics_utils import make_unit_quad_tile, make_circle_fan
 
-
-class RotationTest(object):
+class TextureRotationTest(object):
     def __init__(self):
         self.viewer = sphere_sim.make_viewer(show_touches=True, draw_fn=self.draw, 
         tick_fn=self.tick,
         touch_fn=self.touch)
         self.rotater = RotationHandler()                
 
-        pts = np.array(sphere.spiral_layout(256))
+        ixs, quad, texs = make_unit_quad_tile(256)
         
-        # point shader; simple coloured circles, with no spherical correction
-        point_shader = shader_from_file([getshader("sphere.vert"), getshader("user/point.vert")], [getshader("user/point.frag")])
-        self.point_vbo = ShaderVBO(point_shader, IBuf(np.arange(len(pts))), 
-                                    buffers={"position":VBuf(pts), },
-                                    vars={"constant_size":10.0,                                    
-                                    }, 
-                                    attribs={"color":(1,1,1,1)},
-                                    primitives=GL_POINTS)
-        
+        world_shader= shader_from_file([getshader("sphere.vert"), getshader("user/whole_sphere_tex_rotate.vert")], [getshader("user/whole_sphere_tex.frag")])
+
+        world_image = pyglet.image.load(resource_file("data/azworld.png"))
+
+        self.world_vbo = ShaderVBO(world_shader, IBuf(ixs),
+                        buffers={"quad_vtx": VBuf(quad)},
+                        textures={"tex":world_image.texture})
+
         self.viewer.start()
 
     def touch(self, events):        
@@ -48,20 +47,14 @@ class RotationTest(object):
     def draw(self):
         glClearColor(0.0,0.0,0.0,1)
         glClear(GL_COLOR_BUFFER_BIT)
-        glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
-        glEnable(GL_POINT_SPRITE)
-        
-        self.point_vbo.draw(vars={"quat":self.rotater.orientation})
+    
+        self.world_vbo.draw(vars={"quat":self.rotater.orientation})
 
     def tick(self):        
         self.rotater.update(1/60.0)
-        pass
-        
-                        
-
+        pass                            
               
 if __name__=="__main__":
-    p = RotationTest()
-    
+    p = TextureRotationTest()
     
    
